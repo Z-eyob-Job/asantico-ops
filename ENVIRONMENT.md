@@ -13,12 +13,13 @@ uv run pytest                # run the full suite in the managed env
 `pyproject.toml` pins the runtime deps (mcp, llama-index-core==0.14.22) and a dev
 group (pytest, ruff). Commit `uv.lock` so every machine resolves identically.
 
-## CLAUDE.md
+## Project conventions
 
-`CLAUDE.md` at the repo root encodes the project conventions and golden rules for
-the AI build agents (Claude Code, Cursor, Codex): the safety gate is absolute, new
-tools must be registered in the policy, every side effect must be logged, and the
-business invariants (10.55% tax, no tenant names, no amounts in client emails).
+Golden rules for the project: the safety gate is absolute, new tools must be
+registered in the policy with a risk class, every side effect must be logged, and
+the business invariants hold (10.55% tax on every line item including labor, the
+name "Asantico" never "Asantico LLC", no tenant names on documents, no dollar
+amounts in client messages, no em dashes).
 
 ## MCP
 

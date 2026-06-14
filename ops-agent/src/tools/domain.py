@@ -3,7 +3,7 @@
 In production each of these calls the real asantico-cli (the tax engine, the
 ReportLab PDF generator, the triage agent). Here they are thin, functional stubs
 that return structured results so the agent loop, routing, and approval policy
-run end to end offline. The function signatures are the contract the build lanes
+run end to end offline. The function signatures are the contract the real implementation
 implement against the real CLI.
 
 Asantico invariants enforced here (and in the real CLI): tax rate 10.55% on every

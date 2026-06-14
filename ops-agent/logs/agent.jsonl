@@ -16,3 +16,29 @@
 {"ts": "2026-06-14T22:22:39.018749+00:00", "trace_id": "42d78dec355d", "conv_id": "cli-user", "event": "message_received", "message": "approve"}
 {"ts": "2026-06-14T22:22:39.018777+00:00", "trace_id": "42d78dec355d", "conv_id": "cli-user", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
 {"ts": "2026-06-14T22:22:39.018805+00:00", "trace_id": "42d78dec355d", "conv_id": "cli-user", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-06-14T23:53:41.687391+00:00", "trace_id": "503c6e5d75d9", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-06-14T23:53:41.687965+00:00", "trace_id": "503c6e5d75d9", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-14T23:53:41.688055+00:00", "trace_id": "503c6e5d75d9", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-14T23:53:41.689191+00:00", "trace_id": "07c04a9e1ad3", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-06-14T23:53:41.689274+00:00", "trace_id": "07c04a9e1ad3", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-14T23:53:41.689324+00:00", "trace_id": "07c04a9e1ad3", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-14T23:53:41.689377+00:00", "trace_id": "e479fb5ddb51", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-06-14T23:53:41.689415+00:00", "trace_id": "e479fb5ddb51", "conv_id": "c1", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-14T23:53:41.689454+00:00", "trace_id": "e479fb5ddb51", "conv_id": "c1", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-06-14T23:53:41.690178+00:00", "trace_id": "207b849a2976", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-06-14T23:53:41.690256+00:00", "trace_id": "207b849a2976", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-14T23:53:41.690302+00:00", "trace_id": "207b849a2976", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-14T23:53:41.690357+00:00", "trace_id": "7e782345ab8a", "conv_id": "c1", "event": "message_received", "message": "cancel"}
+{"ts": "2026-06-14T23:53:41.690395+00:00", "trace_id": "7e782345ab8a", "conv_id": "c1", "event": "approval_denied", "tool": "send_client_message"}
+{"ts": "2026-06-14T23:53:41.691152+00:00", "trace_id": "53f9b56a20cd", "conv_id": "c1", "event": "message_received", "message": "What is the sales tax rate?"}
+{"ts": "2026-06-14T23:53:41.691228+00:00", "trace_id": "53f9b56a20cd", "conv_id": "c1", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-06-14T23:53:41.694990+00:00", "trace_id": "53f9b56a20cd", "conv_id": "c1", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-06-14T23:53:41.695702+00:00", "trace_id": "b04014dfdef9", "conv_id": "c1", "event": "message_received", "message": "there is a water leak under the sink"}
+{"ts": "2026-06-14T23:53:41.695778+00:00", "trace_id": "b04014dfdef9", "conv_id": "c1", "event": "routed", "tool": "triage_work_order", "rationale": "Looks like a new work order to triage.", "risk": "read"}
+{"ts": "2026-06-14T23:53:41.695873+00:00", "trace_id": "b04014dfdef9", "conv_id": "c1", "event": "tool_executed", "tool": "triage_work_order", "gated": false}
+{"ts": "2026-06-14T23:53:41.700349+00:00", "trace_id": "a533fb841858", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "x", "body": "y"}}
+{"ts": "2026-06-14T23:53:41.700472+00:00", "trace_id": "a533fb841858", "conv_id": "mcp", "event": "mcp_gated_blocked", "tool": "send_client_message"}
+{"ts": "2026-06-14T23:53:41.701469+00:00", "trace_id": "2bad61d19009", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "x", "body": "y", "approve": true}}
+{"ts": "2026-06-14T23:53:41.701569+00:00", "trace_id": "2bad61d19009", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "send_client_message"}
+{"ts": "2026-06-14T23:53:41.702456+00:00", "trace_id": "abeaab41db50", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "compute_tax", "args": {"subtotal": 420}}
+{"ts": "2026-06-14T23:53:41.702542+00:00", "trace_id": "abeaab41db50", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "compute_tax"}

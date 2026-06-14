@@ -1,8 +1,7 @@
 # Task Backlog: Asantico Operations Agent
 
 Priority order is P0 (gate-blocking) before P1 (core) before P2 (stretch). This is
-a solo build executed across the five lanes in DELEGATION.md, so "owner" means the
-lane that leads the item.
+a solo build, sequenced in phases.
 
 ## P0 - Foundation (done)
 
@@ -14,14 +13,14 @@ lane that leads the item.
 
 ## P1 - Core implementation
 
-- [ ] Phase 2: wrap real asantico-cli tax engine into compute_tax (Cursor; Codex cross-check)
-- [ ] Phase 2: wrap real ReportLab estimate/invoice generators (Cursor)
-- [ ] Phase 2: wrap the real triage agent into triage_work_order (Cursor)
-- [ ] Phase 2: wire the knowledge-rag LlamaIndex pipeline behind knowledge_base (Claude)
-- [ ] Phase 3: implement the Telegram channel end to end (Cursor; Eyob provides token)
-- [ ] Phase 3: per-chat approval state keyed by Telegram chat_id (Cursor)
-- [ ] Phase 4: swap the keyword router for an LLM function-calling router (Cursor; Claude review)
-- [ ] Tests for every wrapper and the Telegram channel (Codex)
+- [ ] Phase 2: wrap real asantico-cli tax engine into compute_tax
+- [ ] Phase 2: wrap real ReportLab estimate/invoice generators
+- [ ] Phase 2: wrap the real triage agent into triage_work_order
+- [ ] Phase 2: wire the knowledge-rag LlamaIndex pipeline behind knowledge_base
+- [ ] Phase 3: implement the Telegram channel end to end
+- [ ] Phase 3: per-chat approval state keyed by Telegram chat_id
+- [ ] Phase 4: swap the keyword router for an LLM function-calling router
+- [ ] Tests for every wrapper and the Telegram channel
 
 ## P2 - Stretch
 

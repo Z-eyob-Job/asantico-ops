@@ -1,6 +1,6 @@
 """MCP server: exposes the Asantico tool registry over the Model Context Protocol.
 
-Any MCP host (Claude Desktop, Cursor, the agent itself) can connect over stdio,
+Any MCP host can connect over stdio,
 call tools/list to discover the tools, and tools/call to run them. The approval
 policy is enforced here too: gated tools (send a message, finalize an invoice)
 are advertised but refuse to execute through MCP without an explicit

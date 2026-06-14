@@ -47,7 +47,6 @@ part's `docs/` folder.
 ## Operations and quality
 
 - `pyproject.toml` + `uv` for a reproducible environment; `uv sync` then `uv run pytest`.
-- `CLAUDE.md` holds the conventions and golden rules for AI build agents.
 - `.github/workflows/ci.yml` runs Ruff lint and both test suites on every push.
 - `.mcp.json` + `ops-agent/src/mcp_server.py` expose the tools over MCP (gate enforced).
 - `ops-agent/src/observability.py` writes structured trace-correlated logs.

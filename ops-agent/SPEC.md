@@ -83,7 +83,7 @@ Phase 2, real tools: wrap the real asantico-cli for tax, estimate, invoice, tria
 Phase 3, real channel: Telegram end to end, then email; per-chat approval state.
 Phase 4, router and polish: swap the keyword router for an LLM function-calling router; demo and docs.
 
-Executed across the five agent lanes in `DELEGATION.md`.
+Executed in sequenced phases as a solo build.
 
 ## 7. Evaluation and acceptance
 
@@ -133,9 +133,9 @@ function-calling router (policy gate still enforced), then production hardening
 P0 (foundation, done): spine, policy gate, observability, MCP server, CI, uv, SPEC,
 architecture diagram, risk register, demo evidence.
 
-P1 (next): real asantico-cli tool wrappers (Cursor); knowledge-rag wired behind
-knowledge_base (Claude); Telegram channel (Cursor, key from Eyob); tests for every
-wrapper and the channel (Codex); LLM router (Cursor, review by Claude).
+P1 (next): wrap the real asantico-cli engines into the tools; wire the knowledge-rag
+pipeline behind knowledge_base; build the Telegram channel; add tests for every
+wrapper and the channel; swap the keyword router for an LLM function-calling router.
 
 P2 (stretch): email channel; skills as SKILL.md packs; scheduled reminders; WhatsApp
-(deferred). See `BACKLOG.md` for the full owned list.
+(deferred). See `BACKLOG.md` for the full list.
