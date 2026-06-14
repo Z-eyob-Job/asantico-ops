@@ -1,0 +1,92 @@
+<svg viewBox="0 0 940 660" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+  <style>
+    .t { font-size: 20px; font-weight: 700; fill: #212529; }
+    .sub { font-size: 11px; fill: #868e96; }
+    .lab { font-size: 13px; font-weight: 600; fill: #212529; }
+    .d { font-size: 11px; fill: #495057; }
+    .chan { fill: #e7f5ff; stroke: #1971c2; stroke-width: 1.4; }
+    .core { fill: #f4f6fb; stroke: #3b5bdb; stroke-width: 1.6; }
+    .gate { fill: #fff0f0; stroke: #e03131; stroke-width: 1.8; }
+    .tool { fill: #ebfbee; stroke: #2f9e44; stroke-width: 1.4; }
+    .gated { fill: #fff4e6; stroke: #e8590c; stroke-width: 1.6; }
+    .a { stroke: #495057; stroke-width: 1.5; fill: none; marker-end: url(#h); }
+    .ar { stroke: #e03131; stroke-width: 1.6; fill: none; marker-end: url(#hr); stroke-dasharray: 5 3; }
+  </style>
+  <defs>
+    <marker id="h" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#495057"/></marker>
+    <marker id="hr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#e03131"/></marker>
+  </defs>
+
+  <text x="28" y="36" class="t">Asantico Operations Agent (local-first, OpenClaw pattern)</text>
+  <text x="28" y="55" class="sub">Runs on the operator's machine. Users message via a chat app. Money and client actions stop for approval.</text>
+
+  <!-- Channels -->
+  <text x="28" y="92" class="lab">Channels (same interface)</text>
+  <rect x="28" y="104" width="120" height="44" rx="9" class="chan"/><text x="44" y="131" class="d">Telegram (1st)</text>
+  <rect x="28" y="156" width="120" height="44" rx="9" class="chan"/><text x="60" y="183" class="d">Email</text>
+  <rect x="28" y="208" width="120" height="44" rx="9" class="chan"/><text x="40" y="235" class="d">WhatsApp (deferred)</text>
+  <rect x="28" y="260" width="120" height="44" rx="9" class="chan"/><text x="64" y="287" class="d">CLI (demo)</text>
+
+  <!-- Gateway -->
+  <rect x="210" y="150" width="150" height="110" rx="11" class="core"/>
+  <text x="232" y="195" class="lab">Gateway</text>
+  <text x="226" y="216" class="sub">long-lived process</text>
+  <text x="226" y="232" class="sub">routes msg &lt;-&gt; reply</text>
+
+  <path class="a" d="M148,126 C180,150 180,180 208,196"/>
+  <path class="a" d="M148,178 L208,200"/>
+  <path class="a" d="M148,230 C180,224 180,214 208,210"/>
+  <path class="a" d="M148,282 C182,260 182,236 208,224"/>
+
+  <!-- Agent loop -->
+  <rect x="410" y="150" width="160" height="110" rx="11" class="core"/>
+  <text x="432" y="190" class="lab">Agent loop</text>
+  <text x="426" y="210" class="sub">route -&gt; check -&gt;</text>
+  <text x="426" y="225" class="sub">run or pause</text>
+  <text x="426" y="246" class="sub">per-chat state</text>
+  <path class="a" d="M360,205 L408,205"/>
+
+  <!-- Router -->
+  <rect x="410" y="290" width="160" height="58" rx="10" class="core"/>
+  <text x="432" y="315" class="lab">Router</text>
+  <text x="426" y="334" class="sub">keyword now / LLM later</text>
+  <path class="a" d="M490,260 L490,288"/>
+
+  <!-- Policy gate -->
+  <rect x="620" y="150" width="150" height="110" rx="11" class="gate"/>
+  <text x="640" y="188" class="lab">Policy gate</text>
+  <text x="636" y="208" class="d">read: free</text>
+  <text x="636" y="224" class="d">draft: free</text>
+  <text x="636" y="240" class="d">gated: APPROVAL</text>
+  <path class="a" d="M570,205 L618,205"/>
+
+  <!-- approval back to user -->
+  <path class="ar" d="M695,150 C700,90 350,90 300,148"/>
+  <text x="430" y="84" class="sub" fill="#e03131">gated action -&gt; ask the operator to approve before running</text>
+
+  <!-- Tools -->
+  <text x="620" y="300" class="lab">Tools</text>
+  <rect x="620" y="312" width="150" height="34" rx="8" class="tool"/><text x="632" y="334" class="d">knowledge_base (RAG)</text>
+  <rect x="620" y="350" width="150" height="34" rx="8" class="tool"/><text x="632" y="372" class="d">triage_work_order</text>
+  <rect x="620" y="388" width="150" height="34" rx="8" class="tool"/><text x="632" y="410" class="d">compute_tax 10.55%</text>
+  <rect x="620" y="426" width="150" height="34" rx="8" class="tool"/><text x="632" y="448" class="d">generate_estimate</text>
+  <rect x="620" y="464" width="150" height="34" rx="8" class="tool"/><text x="632" y="486" class="d">generate_invoice</text>
+  <rect x="620" y="502" width="150" height="34" rx="8" class="tool"/><text x="632" y="524" class="d">draft_client_message</text>
+  <rect x="620" y="540" width="150" height="34" rx="8" class="gated"/><text x="632" y="562" class="d">finalize_invoice (gated)</text>
+  <rect x="620" y="578" width="150" height="34" rx="8" class="gated"/><text x="632" y="600" class="d">send_client_message (gated)</text>
+  <path class="a" d="M695,260 L695,310"/>
+
+  <!-- wrap note -->
+  <rect x="800" y="312" width="118" height="186" rx="9" fill="#fff" stroke="#adb5bd" stroke-width="1.1" stroke-dasharray="4 3"/>
+  <text x="812" y="336" class="lab">Wraps</text>
+  <text x="812" y="357" class="sub">asantico-cli</text>
+  <text x="812" y="372" class="sub">tax + PDF</text>
+  <text x="812" y="387" class="sub">+ triage agent</text>
+  <text x="812" y="410" class="sub">knowledge RAG</text>
+  <text x="812" y="425" class="sub">= knowledge_base</text>
+  <text x="812" y="448" class="sub">copilot HITL</text>
+  <text x="812" y="463" class="sub">= policy gate</text>
+  <path class="a" d="M770,420 L798,420"/>
+
+  <text x="28" y="630" class="sub">Offline demo runs with no keys: python -m src.gateway  ->  CLI channel exercises the full loop and the approval gate.</text>
+</svg>

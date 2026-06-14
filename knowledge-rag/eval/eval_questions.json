@@ -1,0 +1,15 @@
+{
+  "description": "Fixed retrieval evaluation set for the Asantico knowledge base. Each item maps a query to the corpus file(s) that contain the answer. 'relevant_files' is the ground truth used to compute hit rate and MRR.",
+  "questions": [
+    { "id": "Q1", "query": "What is the Seattle sales tax rate?", "relevant_files": ["tax-rules.md"] },
+    { "id": "Q2", "query": "How should the company name be written on documents?", "relevant_files": ["company-policies.md"] },
+    { "id": "Q3", "query": "Do invoices include tenant names?", "relevant_files": ["company-policies.md"] },
+    { "id": "Q4", "query": "Who are estimates for Avenue One routed to?", "relevant_files": ["client-accounts.md"] },
+    { "id": "Q5", "query": "What happens when a work order is an emergency?", "relevant_files": ["work-order-intake.md"] },
+    { "id": "Q6", "query": "Is labor taxable, or only materials?", "relevant_files": ["tax-rules.md"] },
+    { "id": "Q7", "query": "Is there a minimum charge for a dispatched job?", "relevant_files": ["company-policies.md"] },
+    { "id": "Q8", "query": "What is the workflow for producing an estimate?", "relevant_files": ["billing-workflow.md"] },
+    { "id": "Q9", "query": "Which service trades does the business cover?", "relevant_files": ["service-trades.md"] },
+    { "id": "Q10", "query": "Does an outbound client message need approval before sending?", "relevant_files": ["billing-workflow.md", "company-policies.md"] }
+  ]
+}

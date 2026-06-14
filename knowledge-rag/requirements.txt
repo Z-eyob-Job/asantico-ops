@@ -1,0 +1,10 @@
+# Core pipeline (offline path needs only this one line)
+llama-index-core==0.14.22
+
+# Optional embedding backends (uncomment to swap EMBED_BACKEND)
+# llama-index-embeddings-openai          # EMBED_BACKEND=openai, needs OPENAI_API_KEY
+# llama-index-embeddings-huggingface     # EMBED_BACKEND=huggingface, downloads a local model
+
+# Optional generation LLM for the AgentWorkflow demo (pick one)
+# llama-index-llms-openai
+# llama-index-llms-anthropic
