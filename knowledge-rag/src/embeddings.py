@@ -17,7 +17,6 @@ from __future__ import annotations
 import hashlib
 import math
 import os
-from typing import List
 
 from llama_index.core.embeddings import BaseEmbedding
 from pydantic import Field
@@ -25,7 +24,7 @@ from pydantic import Field
 DEFAULT_DIM = 256
 
 
-def _hash_to_vector(text: str, dim: int = DEFAULT_DIM) -> List[float]:
+def _hash_to_vector(text: str, dim: int = DEFAULT_DIM) -> list[float]:
     """Map text to a deterministic unit vector via salted SHA-256 hashing.
 
     The token set of the text is hashed feature-by-feature into a fixed-width
@@ -62,13 +61,13 @@ class HashEmbedding(BaseEmbedding):
     def class_name(cls) -> str:
         return "HashEmbedding"
 
-    def _get_text_embedding(self, text: str) -> List[float]:
+    def _get_text_embedding(self, text: str) -> list[float]:
         return _hash_to_vector(text, self.dim)
 
-    def _get_query_embedding(self, query: str) -> List[float]:
+    def _get_query_embedding(self, query: str) -> list[float]:
         return _hash_to_vector(query, self.dim)
 
-    async def _aget_query_embedding(self, query: str) -> List[float]:
+    async def _aget_query_embedding(self, query: str) -> list[float]:
         return _hash_to_vector(query, self.dim)
 
 

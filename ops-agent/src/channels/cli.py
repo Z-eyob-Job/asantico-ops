@@ -3,8 +3,10 @@ WhatsApp/Telegram user would, with the same conv_id-keyed approval state. This i
 the offline, no-keys demo surface."""
 
 from __future__ import annotations
+
 import sys
-from typing import Iterator
+from collections.abc import Iterator
+
 from src.channels.base import Channel, Inbound
 
 

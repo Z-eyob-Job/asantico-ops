@@ -13,13 +13,12 @@ import hashlib
 import math
 import os
 import re
-from typing import List, Tuple
 
 KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", "knowledge")
 DIM = 256
 
 
-def _vec(text: str) -> List[float]:
+def _vec(text: str) -> list[float]:
     v = [0.0] * DIM
     for tok in re.findall(r"[a-z0-9]+", text.lower()):
         d = hashlib.sha256(tok.encode()).digest()
@@ -30,11 +29,11 @@ def _vec(text: str) -> List[float]:
     return [x / n for x in v] if n else v
 
 
-def _cos(a: List[float], b: List[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+def _cos(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
-def _load_chunks() -> List[Tuple[str, str]]:
+def _load_chunks() -> list[tuple[str, str]]:
     """Return (source_file, chunk_text) pairs split on blank lines / sentences."""
     chunks = []
     if not os.path.isdir(KNOWLEDGE_DIR):

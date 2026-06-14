@@ -47,8 +47,8 @@ def build_agent():
     Requires Settings.llm to be a real generation model. Import is done lazily
     so the offline path (no LLM) can still build and inspect the tool.
     """
-    from llama_index.core.agent.workflow import AgentWorkflow
     from llama_index.core import Settings
+    from llama_index.core.agent.workflow import AgentWorkflow
 
     if Settings.llm is None:
         raise RuntimeError(

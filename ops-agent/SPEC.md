@@ -3,6 +3,24 @@
 Status: scope frozen; implementation in progress
 Last updated: June 14, 2026
 
+## 0. Constitution (non-negotiable principles)
+
+These principles bind every change and override convenience or feature pressure.
+
+C1. Safety gate is absolute. Any action that spends money, finalizes a financial
+document, or contacts a real client requires explicit human approval. No code path,
+channel, or protocol surface may bypass it.
+C2. Least authority. Tools default to deny. A tool that is not registered in the
+policy with a risk class cannot run.
+C3. Everything is observable. Every side-effecting step emits a structured,
+correlated log event. If it is not logged, it did not happen.
+C4. Local-first and private. Client and tenant data stay on the operator's machine.
+Tenant names never appear on documents; client messages never state amounts.
+C5. Reproducible. The system runs offline with no keys for development and grading,
+and dependencies are pinned and lockable with uv.
+C6. Compose, do not reinvent. Reuse the existing asantico-cli engines and the
+asantico-copilot approval pattern rather than rebuilding them.
+
 ## 1. Problem and motivation
 
 A small property-maintenance operator runs the business from their phone, between
@@ -90,3 +108,34 @@ Solo project. Channels are the CLI demo plus Telegram then email; WhatsApp is
 deferred and out of scope for now. All four tool areas in scope
 (invoice/estimate/tax, triage, knowledge base, client messages). Local-first with
 mandatory approval gates on money and client contact.
+
+## 10. Implementation plan
+
+The plan moves from a safe spine outward, hardening before scaling.
+
+Stage A (done): the spine - gateway, agent loop with per-conversation HITL state,
+approval policy, CLI channel, knowledge_base tool, structured observability, an MCP
+server exposing the tools, CI, and uv environment.
+
+Stage B: real tools - replace the domain stubs with calls into the real asantico-cli
+(tax engine, ReportLab PDFs, triage agent) and wire the knowledge-rag LlamaIndex
+pipeline behind the knowledge_base tool.
+
+Stage C: real channel - Telegram end to end (then email), with approval state keyed
+by chat id, running as a persistent local process.
+
+Stage D: intelligence and polish - swap the keyword router for an LLM
+function-calling router (policy gate still enforced), then production hardening
+(secrets, retries, rate limits).
+
+## 11. Task breakdown
+
+P0 (foundation, done): spine, policy gate, observability, MCP server, CI, uv, SPEC,
+architecture diagram, risk register, demo evidence.
+
+P1 (next): real asantico-cli tool wrappers (Cursor); knowledge-rag wired behind
+knowledge_base (Claude); Telegram channel (Cursor, key from Eyob); tests for every
+wrapper and the channel (Codex); LLM router (Cursor, review by Claude).
+
+P2 (stretch): email channel; skills as SKILL.md packs; scheduled reminders; WhatsApp
+(deferred). See `BACKLOG.md` for the full owned list.

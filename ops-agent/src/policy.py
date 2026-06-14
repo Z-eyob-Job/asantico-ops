@@ -12,7 +12,7 @@ from __future__ import annotations
 from enum import Enum
 
 
-class Risk(str, Enum):
+class Risk(str, Enum):  # noqa: UP042
     READ = "read"        # no side effects, runs freely
     DRAFT = "draft"      # produces a document/message but does not send/finalize
     GATED = "gated"      # spends money, finalizes, or sends to a client: needs approval

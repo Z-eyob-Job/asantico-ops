@@ -1,6 +1,6 @@
 """Tests for the safety-critical paths: routing, the approval gate, tax math."""
-from src.agent.loop import Agent
 from src import policy
+from src.agent.loop import Agent
 
 
 def test_send_requires_approval():

@@ -6,8 +6,10 @@ Setup: talk to @BotFather, get a token, set TELEGRAM_BOT_TOKEN in .env.
 """
 
 from __future__ import annotations
+
 import os
-from typing import Iterator
+from collections.abc import Iterator
+
 from src.channels.base import Channel, Inbound
 
 

@@ -6,7 +6,9 @@ add WhatsApp last via the Cloud API or a provider like Twilio. conv_id = the
 sender's phone number."""
 
 from __future__ import annotations
-from typing import Iterator
+
+from collections.abc import Iterator
+
 from src.channels.base import Channel, Inbound
 
 

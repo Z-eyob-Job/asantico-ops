@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "asantico-ops": {
+      "command": "python",
+      "args": ["-m", "src.mcp_server"],
+      "cwd": "ops-agent",
+      "description": "Asantico operations tools (invoice, estimate, tax, triage, knowledge base) exposed over MCP with approval gating."
+    }
+  }
+}

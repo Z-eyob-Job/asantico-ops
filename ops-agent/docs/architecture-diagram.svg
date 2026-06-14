@@ -88,5 +88,18 @@
   <text x="812" y="463" class="sub">= policy gate</text>
   <path class="a" d="M770,420 L798,420"/>
 
+  <!-- MCP server exposing the same tools -->
+  <rect x="240" y="500" width="170" height="58" rx="10" class="chan"/>
+  <text x="256" y="525" class="lab">MCP server</text>
+  <text x="252" y="544" class="sub">tools over stdio (gated)</text>
+  <path class="a" d="M620,420 C520,470 430,490 410,512"/>
+
+  <!-- Observability -->
+  <rect x="28" y="500" width="170" height="58" rx="10" class="eval"/>
+  <text x="44" y="525" class="lab">Observability</text>
+  <text x="40" y="544" class="sub">structured JSON logs</text>
+  <path class="a" d="M410,260 C300,400 220,470 150,498"/>
+
+  <text x="28" y="598" class="sub">Every step emits one trace-correlated log line. Tools are reachable by the agent AND by any MCP host (with the gate enforced).</text>
   <text x="28" y="630" class="sub">Offline demo runs with no keys: python -m src.gateway  ->  CLI channel exercises the full loop and the approval gate.</text>
 </svg>

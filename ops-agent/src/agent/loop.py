@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from src import policy
 from src.agent.router import ToolCall, route
+from src.observability import log_event, new_trace_id
 from src.tools import registry
 
 
@@ -31,29 +32,40 @@ class Agent:
     def handle(self, conv_id: str, message: str) -> str:
         convo = self._convo(conv_id)
         text = message.lower().strip()
+        trace_id = new_trace_id()
+        log_event("message_received", conv_id, trace_id, message=message)
 
         # Resolve a pending gated action first.
         if convo.pending is not None:
             if text in ("approve", "yes", "confirm", "ok"):
                 call = convo.pending
                 convo.pending = None
+                log_event("approval_granted", conv_id, trace_id, tool=call.tool, args=call.args)
                 result = registry.call(call.tool, **call.args)
+                log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=True)
                 return self._format(call.tool, result, approved=True)
             if text in ("cancel", "no", "stop"):
+                tool = convo.pending.tool
                 convo.pending = None
+                log_event("approval_denied", conv_id, trace_id, tool=tool)
                 return "Cancelled. Nothing was sent or finalized."
             # Anything else: re-prompt.
+            log_event("approval_pending_reprompt", conv_id, trace_id)
             return "There is an action waiting. Reply 'approve' or 'cancel'."
 
         # Fresh message: route to a tool.
         call = route(message)
         convo.history.append(message)
+        log_event("routed", conv_id, trace_id, tool=call.tool,
+                  rationale=call.rationale, risk=policy.risk_of(call.tool).value)
 
         if policy.needs_approval(call.tool):
             convo.pending = call
+            log_event("approval_requested", conv_id, trace_id, tool=call.tool, args=call.args)
             return policy.approval_prompt(call.tool, call.args)
 
         result = registry.call(call.tool, **call.args)
+        log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         return self._format(call.tool, result, approved=False)
 
     @staticmethod

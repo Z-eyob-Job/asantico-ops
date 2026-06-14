@@ -3,8 +3,10 @@ reply over SMTP. conv_id = the email thread/Message-ID so approvals stay threade
 Set EMAIL_USER / EMAIL_PASS (app password) in .env. Fill in later."""
 
 from __future__ import annotations
+
 import os
-from typing import Iterator
+from collections.abc import Iterator
+
 from src.channels.base import Channel, Inbound
 
 

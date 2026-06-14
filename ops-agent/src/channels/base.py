@@ -3,8 +3,9 @@ implements the same two operations: yield inbound messages and send replies.
 The gateway is channel-agnostic, so adding a channel never touches the agent."""
 
 from __future__ import annotations
+
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Iterator
 
 
 @dataclass

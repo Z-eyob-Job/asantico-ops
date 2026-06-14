@@ -43,3 +43,12 @@ Asantico code (the asantico-cli tax and PDF engine, the asantico-copilot approva
 gate) so it composes proven parts rather than reinventing them. Channels are CLI,
 Telegram, and email; WhatsApp is deferred. Architecture diagrams are in each
 part's `docs/` folder.
+
+## Operations and quality
+
+- `pyproject.toml` + `uv` for a reproducible environment; `uv sync` then `uv run pytest`.
+- `CLAUDE.md` holds the conventions and golden rules for AI build agents.
+- `.github/workflows/ci.yml` runs Ruff lint and both test suites on every push.
+- `.mcp.json` + `ops-agent/src/mcp_server.py` expose the tools over MCP (gate enforced).
+- `ops-agent/src/observability.py` writes structured trace-correlated logs.
+- `SPEC.md` (constitution, spec, plan, tasks), `RISKS.md`, `ENVIRONMENT.md`, `DEMO.md`.

@@ -30,7 +30,7 @@ TOP_K = int(os.getenv("TOP_K", "4"))
 
 
 def load_questions(path: str = EVAL_FILE) -> list[dict]:
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         return json.load(fh)["questions"]
 
 
