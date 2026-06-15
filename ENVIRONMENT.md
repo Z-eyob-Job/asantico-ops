@@ -13,7 +13,7 @@ uv run pytest                # run the full suite in the managed env
 `pyproject.toml` pins the runtime deps (mcp, llama-index-core==0.14.22) and a dev
 group (pytest, ruff). Commit `uv.lock` so every machine resolves identically.
 
-## Project conventions
+## CLAUDE.md (project conventions)
 
 Golden rules for the project: the safety gate is absolute, new tools must be
 registered in the policy with a risk class, every side effect must be logged, and
