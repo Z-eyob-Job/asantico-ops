@@ -20,6 +20,7 @@ from src.tools import registry
 class Conversation:
     pending: ToolCall | None = None
     history: list = field(default_factory=list)
+    last_draft: dict | None = None  # most recent drafted client message, by conv
 
 
 class Agent:
@@ -60,12 +61,22 @@ class Agent:
                   rationale=call.rationale, risk=policy.risk_of(call.tool).value)
 
         if policy.needs_approval(call.tool):
+            # Safety: the operator must approve the exact text that will be sent.
+            # If a client message was drafted earlier in this conversation, carry
+            # that reviewed draft into the gated send instead of a generic body.
+            if call.tool == "send_client_message" and convo.last_draft is not None:
+                call.args["to"] = convo.last_draft.get("to", call.args.get("to"))
+                call.args["subject"] = convo.last_draft.get("subject", call.args.get("subject"))
+                call.args["body"] = convo.last_draft.get("body", call.args.get("body"))
+                log_event("send_uses_reviewed_draft", conv_id, trace_id, tool=call.tool)
             convo.pending = call
             log_event("approval_requested", conv_id, trace_id, tool=call.tool, args=call.args)
             return policy.approval_prompt(call.tool, call.args)
 
         result = registry.call(call.tool, **call.args)
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
+        if call.tool == "draft_client_message":
+            convo.last_draft = result  # remember the reviewed draft for a later send
         return self._format(call.tool, result, approved=False)
 
     @staticmethod
