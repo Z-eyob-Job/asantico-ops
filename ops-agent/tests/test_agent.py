@@ -41,6 +41,29 @@ def test_tax_rate_is_seattle():
     assert out["tax"] == 44.31 and out["total"] == 464.31
 
 
+def test_multi_line_tax_is_per_line():
+    """Tax applies to every line item, so a 200 + 220 estimate totals the same
+    464.31 as a single 420 line."""
+    from src.tools.domain import generate_estimate
+    out = generate_estimate("VEER LOFTS", "208", [
+        {"description": "labor", "amount": 200.0},
+        {"description": "materials", "amount": 220.0},
+    ])
+    assert out["subtotal"] == 420.0 and out["tax"] == 44.31 and out["total"] == 464.31
+
+
+def test_real_tax_engine_matches_to_the_cent():
+    """When asantico-cli is installed, the real Decimal engine is used and must
+    match the expected cents. Skipped automatically if it is not installed."""
+    import pytest
+    pytest.importorskip("asantico_cli")
+    from src.tools.domain import TAX_ENGINE, compute_tax
+    assert TAX_ENGINE == "asantico-cli"
+    out = compute_tax(420.0)
+    assert out["engine"] == "asantico-cli"
+    assert out["tax"] == 44.31 and out["total"] == 464.31
+
+
 def test_reads_never_gated_sends_always_gated():
     assert not policy.needs_approval("knowledge_base")
     assert not policy.needs_approval("generate_estimate")

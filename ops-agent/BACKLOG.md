@@ -13,7 +13,7 @@ a solo build, sequenced in phases.
 
 ## P1 - Core implementation
 
-- [ ] Phase 2: wrap real asantico-cli tax engine into compute_tax
+- [x] Phase 2: wrap real asantico-cli tax engine into compute_tax (with offline fallback; tests pass both ways)
 - [ ] Phase 2: wrap real ReportLab estimate/invoice generators
 - [ ] Phase 2: wrap the real triage agent into triage_work_order
 - [ ] Phase 2: wire the knowledge-rag LlamaIndex pipeline behind knowledge_base

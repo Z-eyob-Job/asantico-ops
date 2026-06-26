@@ -38,7 +38,7 @@ rather than new invention.
 
 Sprint scope (each lands on main with a passing test before its box is ticked):
 
-- [ ] P1: wrap the real asantico-cli tax engine into compute_tax
+- [x] P1: wrap the real asantico-cli tax engine into compute_tax
 - [ ] P1: wrap the real ReportLab estimate and invoice generators
 - [ ] P1: wrap the real triage logic into triage_work_order
 - [ ] P1: wire the knowledge-rag LlamaIndex pipeline behind knowledge_base

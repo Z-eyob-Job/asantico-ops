@@ -1,10 +1,9 @@
 """Domain tools.
 
-In production each of these calls the real asantico-cli (the tax engine, the
-ReportLab PDF generator, the triage agent). Here they are thin, functional stubs
-that return structured results so the agent loop, routing, and approval policy
-run end to end offline. The function signatures are the contract the real implementation
-implement against the real CLI.
+These tools call the real asantico-cli tax engine when it is installed, and
+fall back to a built-in computation when it is not, so the agent loop, routing,
+and approval policy run end to end offline with no install required. Install the
+real engine to activate it: `pip install -e ../asantico-cli`.
 
 Asantico invariants enforced here (and in the real CLI): tax rate 10.55% on every
 line item including labor, company name "Asantico" (never "Asantico LLC"), no
@@ -16,11 +15,42 @@ from __future__ import annotations
 SEATTLE_TAX_RATE = 0.1055
 COMPANY = "Asantico"
 
+# Wire the real asantico-cli tax engine if it is importable. The engine computes
+# tax per line item with Decimal precision, which is the production behavior.
+try:
+    from decimal import Decimal as _Decimal
+
+    from asantico_cli.domain.models import LineItem as _LineItem
+    from asantico_cli.domain.tax import compute_totals as _compute_totals
+
+    TAX_ENGINE = "asantico-cli"
+except ImportError:  # pragma: no cover - exercised by the offline fallback path
+    TAX_ENGINE = "builtin"
+
+
+def _totals(amounts: list[float]) -> tuple[float, float, float]:
+    """Return (subtotal, tax, total) for a list of line amounts.
+
+    Uses the real asantico-cli engine (per-line Decimal tax) when available,
+    otherwise the built-in float computation. Both apply 10.55% to every line.
+    """
+    if TAX_ENGINE == "asantico-cli":
+        items = [
+            _LineItem(description="line", quantity=_Decimal("1"),
+                      unit="flat", unit_price=_Decimal(str(a)))
+            for a in amounts
+        ]
+        sub, tax, tot = _compute_totals(items)
+        return float(round(sub, 2)), float(round(tax, 2)), float(round(tot, 2))
+    sub = sum(amounts)
+    tax = round(sub * SEATTLE_TAX_RATE, 2)
+    return round(sub, 2), tax, round(sub + tax, 2)
+
 
 def compute_tax(subtotal: float, rate: float = SEATTLE_TAX_RATE) -> dict:
-    tax = round(subtotal * rate, 2)
-    return {"subtotal": round(subtotal, 2), "rate": rate, "tax": tax,
-            "total": round(subtotal + tax, 2)}
+    sub, tax, total = _totals([subtotal])
+    return {"subtotal": sub, "rate": SEATTLE_TAX_RATE, "tax": tax,
+            "total": total, "engine": TAX_ENGINE}
 
 
 def triage_work_order(description: str) -> dict:
@@ -38,10 +68,12 @@ def triage_work_order(description: str) -> dict:
 
 
 def generate_estimate(property: str, unit: str, line_items: list[dict]) -> dict:
-    subtotal = sum(li.get("amount", 0) for li in line_items)
-    taxed = compute_tax(subtotal)
+    amounts = [li.get("amount", 0) for li in line_items]
+    subtotal, tax, total = _totals(amounts)
     return {"document": "estimate", "company": COMPANY, "property": property,
-            "unit": unit, "line_items": line_items, **taxed,
+            "unit": unit, "line_items": line_items,
+            "subtotal": subtotal, "rate": SEATTLE_TAX_RATE, "tax": tax,
+            "total": total, "engine": TAX_ENGINE,
             "status": "draft", "note": "Draft only. No tenant name included."}
 
 
