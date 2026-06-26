@@ -59,6 +59,8 @@ class Agent:
         convo.history.append(message)
         log_event("routed", conv_id, trace_id, tool=call.tool,
                   rationale=call.rationale, risk=policy.risk_of(call.tool).value)
+        for note in call.notes:
+            log_event("assumption", conv_id, trace_id, tool=call.tool, note=note)
 
         if policy.needs_approval(call.tool):
             # Safety: the operator must approve the exact text that will be sent.
@@ -77,7 +79,10 @@ class Agent:
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         if call.tool == "draft_client_message":
             convo.last_draft = result  # remember the reviewed draft for a later send
-        return self._format(call.tool, result, approved=False)
+        reply = self._format(call.tool, result, approved=False)
+        if call.notes:
+            reply += "\nNote: " + " ".join(call.notes)
+        return reply
 
     @staticmethod
     def _format(tool: str, result: dict, approved: bool) -> str:

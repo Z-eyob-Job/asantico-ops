@@ -60,6 +60,41 @@ def test_send_carries_the_reviewed_draft():
     assert "work completed; documentation ready for review" not in prompt.lower()
 
 
+def test_assumed_price_is_surfaced():
+    """When no price is in the message, the agent must flag the assumed amount
+    rather than silently pricing the document."""
+    a = Agent()
+    r = a.handle("c1", "create an estimate for VEER LOFTS unit 208")
+    assert "assumed" in r.lower()
+
+
+def test_priced_message_has_no_assumption_note():
+    a = Agent()
+    r = a.handle("c1", "create an estimate for VEER LOFTS unit 208 for $420")
+    assert "assumed" not in r.lower()
+    assert "464.31" in r
+
+
+def test_gateway_selects_correct_channel_class():
+    from src.channels.cli import CLIChannel
+    from src.gateway import make_channel
+    assert isinstance(make_channel("cli"), CLIChannel)
+
+
+def test_gateway_rejects_unknown_channel():
+    import pytest
+    from src.gateway import make_channel
+    with pytest.raises(ValueError):
+        make_channel("carrier_pigeon")
+
+
+def test_deferred_channels_fail_clearly():
+    import pytest
+    from src.channels.whatsapp import WhatsAppChannel
+    with pytest.raises(NotImplementedError):
+        list(WhatsAppChannel().listen())
+
+
 def test_unregistered_tool_is_blocked():
     import pytest
     with pytest.raises(PermissionError):

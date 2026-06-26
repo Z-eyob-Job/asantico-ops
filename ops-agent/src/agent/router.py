@@ -17,6 +17,7 @@ class ToolCall:
     tool: str
     args: dict = field(default_factory=dict)
     rationale: str = ""
+    notes: list = field(default_factory=list)  # assumptions worth surfacing/logging
 
 
 def route(message: str) -> ToolCall:
@@ -31,17 +32,17 @@ def route(message: str) -> ToolCall:
     # Approval / control words are handled by the loop, not the router.
     if any(w in m for w in ("invoice",)) and "send" not in m:
         prop, unit = _extract_property_unit(m)
+        items, notes = _line_items_with_notes(m)
         return ToolCall("generate_invoice",
-                        {"property": prop, "unit": unit,
-                         "line_items": _extract_line_items(m)},
-                        "User asked for an invoice.")
+                        {"property": prop, "unit": unit, "line_items": items},
+                        "User asked for an invoice.", notes)
 
     if "estimate" in m:
         prop, unit = _extract_property_unit(m)
+        items, notes = _line_items_with_notes(m)
         return ToolCall("generate_estimate",
-                        {"property": prop, "unit": unit,
-                         "line_items": _extract_line_items(m)},
-                        "User asked for an estimate.")
+                        {"property": prop, "unit": unit, "line_items": items},
+                        "User asked for an estimate.", notes)
 
     if any(w in m for w in ("leak", "broke", "broken", "not working", "log", "work order", "triage")):
         return ToolCall("triage_work_order", {"description": message},
@@ -90,6 +91,13 @@ def _extract_property_unit(m: str):
     return prop, unit
 
 
-def _extract_line_items(m: str):
+def _line_items_with_notes(m: str):
+    """Return (line_items, notes). If no price is in the message, fall back to a
+    default service-call amount and record a note so the assumption is surfaced
+    to the operator and logged, rather than silently priced."""
     amt = _extract_amount(m)
-    return [{"description": "Service call", "amount": amt or 150.0}]
+    if amt is None:
+        note = ("no price was found in the message, so a 150.00 service-call "
+                "amount was assumed; confirm before finalizing.")
+        return [{"description": "Service call", "amount": 150.0}], [note]
+    return [{"description": "Service call", "amount": amt}], []
