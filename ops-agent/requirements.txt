@@ -1,7 +1,9 @@
 # The offline demo (CLI channel) needs NO dependencies beyond the standard library.
 
+# The Telegram channel uses only the standard library (urllib long-polling), so it
+# needs NO dependency; set TELEGRAM_BOT_TOKEN and run `python -m src.gateway telegram`.
+
 # Week 8 production dependencies (uncomment as channels/LLM are wired):
 # llama-index-core==0.14.22          # real knowledge_base RAG pipeline
 # langgraph                          # agent loop with HITL interrupt
-# python-telegram-bot                # Telegram channel
 # anthropic                          # LLM router + grounded generation
