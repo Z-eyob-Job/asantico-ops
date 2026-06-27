@@ -2,7 +2,7 @@
 
 Run a quick retrieval check from the project root:
 
-    python -m src.retrieve "How is retrieval quality measured?"
+    python -m knowledge_rag.retrieve "How is retrieval quality measured?"
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import sys
 
 from llama_index.core.retrievers import VectorIndexRetriever
 
-from src.ingest import load_index
+from knowledge_rag.ingest import load_index
 
 TOP_K = int(os.getenv("TOP_K", "4"))
 

@@ -2,7 +2,7 @@
 
 Run from the project root:
 
-    python -m src.evaluate
+    python -m knowledge_rag.evaluate
 
 Writes a markdown report to eval/evaluation_report.md and prints a summary.
 
@@ -22,7 +22,7 @@ import json
 import os
 from datetime import date
 
-from src.retrieve import get_retriever
+from knowledge_rag.retrieve import get_retriever
 
 EVAL_FILE = os.getenv("EVAL_FILE", "eval/eval_questions.json")
 REPORT_FILE = os.getenv("REPORT_FILE", "eval/evaluation_report.md")

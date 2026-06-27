@@ -1,5 +1,5 @@
 """Unit tests for the metric math, independent of the retrieval stack."""
-from src.embeddings import HashEmbedding, _hash_to_vector
+from knowledge_rag.embeddings import HashEmbedding, _hash_to_vector
 
 
 def _reciprocal_rank(retrieved, relevant):

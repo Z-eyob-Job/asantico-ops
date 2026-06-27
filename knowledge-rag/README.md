@@ -11,13 +11,15 @@ document cited.
 ```
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python -m src.ingest       # ingest, chunk, embed, persist the index
-python -m src.evaluate     # hit rate + MRR, writes eval/evaluation_report.md
-python -m src.retrieve "What is the Seattle sales tax rate?"
-python -m src.agent "Does a client message need approval before sending?"
+python -m knowledge_rag.ingest       # ingest, chunk, embed, persist the index
+python -m knowledge_rag.evaluate     # hit rate + MRR, writes eval/evaluation_report.md
+python -m knowledge_rag.retrieve "What is the Seattle sales tax rate?"
+python -m knowledge_rag.agent "Does a client message need approval before sending?"
 ```
 
-Run modules with `python -m src.<module>` from this folder.
+Run modules with `python -m knowledge_rag.<module>` from this folder. The pipeline
+lives in the importable `knowledge_rag` package (not a bare top-level `src`), so
+the sibling `ops-agent` can import it without a package-name collision.
 
 ## Pipeline
 
@@ -30,7 +32,7 @@ build a `VectorStoreIndex` persisted to `data/index/`. Retrieval is a
 
 ## Embedding backend
 
-The default is a deterministic hash embedding in `src/embeddings.py`: no keys, no
+The default is a deterministic hash embedding in `knowledge_rag/embeddings.py`: no keys, no
 network, identical results on any machine. It ranks by token overlap rather than
 meaning, so its scores are a reproducibility floor, not a quality ceiling.
 Swapping to a learned backend is one line: set `EMBED_BACKEND=openai` (or
@@ -48,11 +50,11 @@ the source) and one soft miss are broken down query by query in
 
 ```
 corpus/                 the Asantico knowledge documents
-src/embeddings.py       hash | openai | huggingface backends
-src/ingest.py           ingestion, chunking, indexing, persistence
-src/retrieve.py         retriever and grounded query engine
-src/evaluate.py         hit rate + MRR + failure analysis + report writer
-src/agent.py            AgentWorkflow wiring the RAG engine as a tool
+knowledge_rag/embeddings.py  hash | openai | huggingface backends
+knowledge_rag/ingest.py      ingestion, chunking, indexing, persistence
+knowledge_rag/retrieve.py    retriever and grounded query engine
+knowledge_rag/evaluate.py    hit rate + MRR + failure analysis + report writer
+knowledge_rag/agent.py       AgentWorkflow wiring the RAG engine as a tool
 eval/eval_questions.json  fixed evaluation set with ground truth
 eval/evaluation_report.md generated metrics and failure analysis
 docs/architecture-diagram.svg  pipeline diagram

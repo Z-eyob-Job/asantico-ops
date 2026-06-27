@@ -35,7 +35,7 @@ This folder is the Week 9 checkpoint submission. The four required artifacts:
 ```
 git clone https://github.com/Z-eyob-Job/asantico-ops.git
 cd asantico-ops
-cd knowledge-rag && pip install -r requirements.txt && python -m src.ingest && python -m src.evaluate
+cd knowledge-rag && pip install -r requirements.txt && python -m knowledge_rag.ingest && python -m knowledge_rag.evaluate
 cd ../ops-agent && python -m pytest tests/ -q
 cd ../knowledge-rag && python -m pytest tests/ -q
 ```

@@ -24,7 +24,8 @@ human approval.
 - `ops-agent/src/policy.py` - approval gate
 - `ops-agent/src/observability.py` - structured JSON logging
 - `ops-agent/src/mcp_server.py` - exposes tools over MCP (stdio)
-- `knowledge-rag/src/` - the RAG pipeline behind the knowledge_base tool
+- `knowledge-rag/knowledge_rag/` - the RAG pipeline behind the knowledge_base tool
+  (importable as `knowledge_rag`; selected at runtime via `KB_BACKEND=rag`)
 
 ## Commands
 - Run the agent demo: `cd ops-agent && python -m src.gateway`

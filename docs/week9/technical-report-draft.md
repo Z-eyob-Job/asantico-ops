@@ -213,7 +213,7 @@ cd asantico-ops
 
 # Knowledge base retrieval metrics
 cd knowledge-rag && pip install -r requirements.txt
-python -m src.ingest && python -m src.evaluate     # hit rate 0.900, MRR 0.850
+python -m knowledge_rag.ingest && python -m knowledge_rag.evaluate     # hit rate 0.900, MRR 0.850
 
 # Tests and lint
 cd ../ops-agent && python -m pytest tests/ -q       # 13 passed

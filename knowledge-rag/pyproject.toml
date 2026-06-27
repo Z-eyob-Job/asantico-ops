@@ -1,0 +1,18 @@
+[project]
+name = "knowledge-rag"
+version = "0.1.0"
+description = "LlamaIndex retrieval pipeline over the Asantico knowledge base."
+requires-python = ">=3.11"
+dependencies = [
+    "llama-index-core==0.14.22",
+]
+
+# A real, importable package (knowledge_rag) rather than a bare top-level `src`,
+# so it can be imported from the sibling ops-agent without colliding with that
+# project's own `src` package.
+[tool.setuptools]
+packages = ["knowledge_rag"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"

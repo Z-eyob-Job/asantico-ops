@@ -28,8 +28,8 @@ and ships with a fixed evaluation set. See `knowledge-rag/README.md`.
 ```
 cd knowledge-rag
 pip install -r requirements.txt
-python -m src.ingest
-python -m src.evaluate       # writes eval/evaluation_report.md
+python -m knowledge_rag.ingest
+python -m knowledge_rag.evaluate       # writes eval/evaluation_report.md
 ```
 
 Current retrieval metrics on the ten-question fixed set with the offline backend:

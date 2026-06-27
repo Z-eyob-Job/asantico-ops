@@ -1,6 +1,6 @@
 # Retrieval Evaluation Report
 
-Date: 2026-06-14  
+Date: 2026-06-26  
 Pipeline: LlamaIndex VectorStoreIndex over the Asantico knowledge base
 
 ## Configuration
@@ -18,16 +18,16 @@ Hit rate is the fraction of queries where a relevant file appears anywhere in th
 
 | ID | First relevant rank | Reciprocal rank | Top score | Hit |
 |----|--------------------|-----------------|-----------|-----|
-| Q1 | 1 | 1.0 | 0.4915 | yes |
-| Q2 | 1 | 1.0 | 0.2869 | yes |
-| Q3 | 1 | 1.0 | 0.1148 | yes |
-| Q4 | 1 | 1.0 | 0.3425 | yes |
-| Q5 | 1 | 1.0 | 0.2883 | yes |
-| Q6 | 1 | 1.0 | 0.3897 | yes |
-| Q7 | - | 0.0 | 0.3174 | NO |
-| Q8 | 1 | 1.0 | 0.3772 | yes |
-| Q9 | 2 | 0.5 | 0.2055 | yes |
-| Q10 | 1 | 1.0 | 0.1591 | yes |
+| Q1 | 1 | 1.0 | 0.4935 | yes |
+| Q2 | 1 | 1.0 | 0.3019 | yes |
+| Q3 | 1 | 1.0 | 0.1188 | yes |
+| Q4 | 1 | 1.0 | 0.3327 | yes |
+| Q5 | 1 | 1.0 | 0.2816 | yes |
+| Q6 | 1 | 1.0 | 0.3964 | yes |
+| Q7 | - | 0.0 | 0.3161 | NO |
+| Q8 | 1 | 1.0 | 0.3614 | yes |
+| Q9 | 2 | 0.5 | 0.2093 | yes |
+| Q10 | 1 | 1.0 | 0.1638 | yes |
 
 ## Failure Analysis
 

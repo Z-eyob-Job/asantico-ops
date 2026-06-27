@@ -2,7 +2,7 @@
 
 Run as a module from the project root:
 
-    python -m src.ingest
+    python -m knowledge_rag.ingest
 
 This reads every file in ./corpus, splits it into chunks, embeds the chunks
 with the configured backend, builds a VectorStoreIndex, and persists it to
@@ -22,7 +22,7 @@ from llama_index.core import (
 )
 from llama_index.core.node_parser import SentenceSplitter
 
-from src.embeddings import get_embedding
+from knowledge_rag.embeddings import get_embedding
 
 CORPUS_DIR = os.getenv("CORPUS_DIR", "corpus")
 INDEX_DIR = os.getenv("INDEX_DIR", "data/index")

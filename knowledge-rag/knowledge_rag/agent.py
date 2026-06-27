@@ -9,7 +9,7 @@ exercises.
 
 Run from the project root:
 
-    python -m src.agent "What is the sales tax rate?"
+    python -m knowledge_rag.agent "What is the sales tax rate?"
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import sys
 
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 
-from src.retrieve import get_query_engine
+from knowledge_rag.retrieve import get_query_engine
 
 TOP_K = int(os.getenv("TOP_K", "4"))
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     print()
     print("Offline mode: no generation LLM configured, so showing retrieval "
           "context the agent would ground on.\n")
-    from src.retrieve import retrieve
+    from knowledge_rag.retrieve import retrieve
 
     for rank, node in enumerate(retrieve(question), start=1):
         src = node.node.metadata.get("file_name", "unknown")

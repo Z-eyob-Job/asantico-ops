@@ -53,6 +53,13 @@ draft_client_message, query_jobs, and the two gated actions finalize_invoice and
 send_client_message. In production each wraps the real asantico-cli; here they are
 functional stubs so the whole system runs end to end.
 
+The knowledge_base tool has two backends, chosen by `KB_BACKEND`. The default
+`offline` backend is a zero-dependency hash retriever so the demo and tests run
+with no install and no keys; `rag` uses the real `knowledge-rag` LlamaIndex
+pipeline. If `rag` is requested but the pipeline or its dependencies are missing,
+the tool logs a warning and falls back to offline. Both return the same shape:
+`{"answer": str, "sources": [{"source", "text", "score"}]}`.
+
 The router (`src/agent/router.py`) maps a message to a tool. The offline version
 is deterministic keyword routing so the demo needs no keys; production swaps in an
 LLM function-calling router behind the same interface.
