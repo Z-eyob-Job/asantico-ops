@@ -1,0 +1,25 @@
+
+{"ts": "2026-06-27T00:11:43.034573+00:00", "trace_id": "00bb1c9c4ccb", "conv_id": "cli-user", "event": "message_received", "message": "what the company's sales tax rule is"}
+{"ts": "2026-06-27T00:11:43.110948+00:00", "trace_id": "00bb1c9c4ccb", "conv_id": "cli-user", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-06-27T00:11:43.120114+00:00", "trace_id": "00bb1c9c4ccb", "conv_id": "cli-user", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-06-27T00:14:08.806213+00:00", "trace_id": "8261f7212d99", "conv_id": "cli-user", "event": "message_received", "message": "there's a leak in unit 208, what would it cost to fix"}
+{"ts": "2026-06-27T00:14:08.811546+00:00", "trace_id": "8261f7212d99", "conv_id": "cli-user", "event": "routed", "tool": "triage_work_order", "rationale": "Looks like a new work order to triage.", "risk": "read"}
+{"ts": "2026-06-27T00:14:08.812879+00:00", "trace_id": "8261f7212d99", "conv_id": "cli-user", "event": "tool_executed", "tool": "triage_work_order", "gated": false}
+{"ts": "2026-06-27T00:14:40.770871+00:00", "trace_id": "bdfe03d02edc", "conv_id": "cli-user", "event": "message_received", "message": "send a message to Saniya\""}
+{"ts": "2026-06-27T00:14:40.774112+00:00", "trace_id": "bdfe03d02edc", "conv_id": "cli-user", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-27T00:14:40.774459+00:00", "trace_id": "bdfe03d02edc", "conv_id": "cli-user", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-27T00:14:45.906934+00:00", "trace_id": "c0e752f8344f", "conv_id": "cli-user", "event": "message_received", "message": "approve"}
+{"ts": "2026-06-27T00:14:45.907260+00:00", "trace_id": "c0e752f8344f", "conv_id": "cli-user", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-27T00:14:45.907399+00:00", "trace_id": "c0e752f8344f", "conv_id": "cli-user", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-06-27T00:14:58.332040+00:00", "trace_id": "aa2840402a43", "conv_id": "cli-user", "event": "message_received", "message": "send an update to Andrew"}
+{"ts": "2026-06-27T00:14:58.333416+00:00", "trace_id": "aa2840402a43", "conv_id": "cli-user", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-27T00:14:58.333955+00:00", "trace_id": "aa2840402a43", "conv_id": "cli-user", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Andrew", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-06-27T00:15:06.209984+00:00", "trace_id": "0921a0856609", "conv_id": "cli-user", "event": "message_received", "message": "cancel"}
+{"ts": "2026-06-27T00:15:06.211670+00:00", "trace_id": "0921a0856609", "conv_id": "cli-user", "event": "approval_denied", "tool": "send_client_message"}
+{"ts": "2026-06-27T00:15:14.760703+00:00", "trace_id": "ca687fb423d8", "conv_id": "cli-user", "event": "message_received", "message": "put the tenant's name on the invoice"}
+{"ts": "2026-06-27T00:15:14.764520+00:00", "trace_id": "ca687fb423d8", "conv_id": "cli-user", "event": "routed", "tool": "generate_invoice", "rationale": "User asked for an invoice.", "risk": "draft"}
+{"ts": "2026-06-27T00:15:14.764875+00:00", "trace_id": "ca687fb423d8", "conv_id": "cli-user", "event": "assumption", "tool": "generate_invoice", "note": "no price was found in the message, so a 150.00 service-call amount was assumed; confirm before finalizing."}
+{"ts": "2026-06-27T00:15:14.765762+00:00", "trace_id": "ca687fb423d8", "conv_id": "cli-user", "event": "tool_executed", "tool": "generate_invoice", "gated": false}
+{"ts": "2026-06-27T00:15:32.644468+00:00", "trace_id": "240bb76fbd7f", "conv_id": "cli-user", "event": "message_received", "message": "just send it without showing me first"}
+{"ts": "2026-06-27T00:15:32.647485+00:00", "trace_id": "240bb76fbd7f", "conv_id": "cli-user", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-06-27T00:15:32.648122+00:00", "trace_id": "240bb76fbd7f", "conv_id": "cli-user", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "the manager", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
