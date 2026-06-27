@@ -19,7 +19,9 @@ human approval.
 
 ## Layout
 - `ops-agent/src/gateway.py` - entrypoint; wires a channel to the agent loop
-- `ops-agent/src/agent/` - loop (human-in-the-loop state) and router
+- `ops-agent/src/agent/` - loop (human-in-the-loop state) and router (keyword
+  default; `ROUTER_BACKEND=llm` uses Anthropic function calling, falls back to keyword)
+- `ops-agent/src/llm.py` - optional Anthropic access (lazy import; key from env only)
 - `ops-agent/src/tools/` - registry + domain tools (wrap the real asantico-cli in production)
 - `ops-agent/src/policy.py` - approval gate
 - `ops-agent/src/observability.py` - structured JSON logging

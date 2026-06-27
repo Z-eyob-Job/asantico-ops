@@ -15,6 +15,11 @@ from src.agent.router import ToolCall, route
 from src.observability import log_event, new_trace_id
 from src.tools import registry
 
+# Control words steer a pending approval; they are never a request on their own.
+APPROVE_WORDS = ("approve", "yes", "confirm", "ok")
+CANCEL_WORDS = ("cancel", "no", "stop")
+CONTROL_WORDS = APPROVE_WORDS + CANCEL_WORDS
+
 
 @dataclass
 class Conversation:
@@ -39,14 +44,14 @@ class Agent:
 
         # Resolve a pending gated action first.
         if convo.pending is not None:
-            if text in ("approve", "yes", "confirm", "ok"):
+            if text in APPROVE_WORDS:
                 call = convo.pending
                 convo.pending = None
                 log_event("approval_granted", conv_id, trace_id, tool=call.tool, args=call.args)
                 result = registry.call(call.tool, **call.args)
                 log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=True)
                 return self._format(call.tool, result, approved=True)
-            if text in ("cancel", "no", "stop"):
+            if text in CANCEL_WORDS:
                 tool = convo.pending.tool
                 convo.pending = None
                 log_event("approval_denied", conv_id, trace_id, tool=tool)
@@ -54,6 +59,14 @@ class Agent:
             # Anything else: re-prompt.
             log_event("approval_pending_reprompt", conv_id, trace_id)
             return "There is an action waiting. Reply 'approve' or 'cancel'."
+
+        # A bare control word with nothing pending controls nothing. Never route
+        # it to a tool. This is enforced before routing, so it holds identically
+        # for the keyword and the LLM router backends.
+        if text in CONTROL_WORDS:
+            log_event("control_word_no_pending", conv_id, trace_id, word=text)
+            return ("There is nothing waiting to approve or cancel. "
+                    "Send a request first, then I can act on it.")
 
         # Fresh message: route to a tool.
         call = route(message)

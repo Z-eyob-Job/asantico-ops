@@ -60,9 +60,16 @@ pipeline. If `rag` is requested but the pipeline or its dependencies are missing
 the tool logs a warning and falls back to offline. Both return the same shape:
 `{"answer": str, "sources": [{"source", "text", "score"}]}`.
 
-The router (`src/agent/router.py`) maps a message to a tool. The offline version
-is deterministic keyword routing so the demo needs no keys; production swaps in an
-LLM function-calling router behind the same interface.
+The router (`src/agent/router.py`) maps a message to a tool, with two backends
+chosen by `ROUTER_BACKEND`. The default `keyword` router is deterministic so the
+demo and tests need no keys; `llm` uses Anthropic function calling over the same
+registry (model from `ANTHROPIC_MODEL`, default `claude-sonnet-4-6`). Both return
+the same `ToolCall`, so the loop and policy gate are unchanged. If `llm` is
+selected but no key/SDK is available or the call fails, the router logs a warning
+and falls back to keyword routing. Either way the policy gate stops every gated
+action, so a misrouted gated call is still blocked. When a key is present the
+knowledge_base tool also generates a short answer grounded in the retrieved
+sources; with no key it returns the raw retrieved snippets.
 
 The policy (`src/policy.py`) is the safety spine. Each tool has a risk class:
 reads run freely, drafts produce documents without sending, and gated actions

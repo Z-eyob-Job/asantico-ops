@@ -1,15 +1,29 @@
 """Router: turn a natural-language message into a tool call.
 
-Production swaps in an LLM router (function calling over the registry). This
-deterministic keyword router lets the whole agent run offline with no keys, so
-the demo and tests are reproducible. The interface (message in, ToolCall out) is
-identical, so swapping the LLM in does not change the loop or the policy layer.
+Two interchangeable routers sit behind one interface, selected by the
+``ROUTER_BACKEND`` environment variable:
+
+- ``keyword`` (default): a deterministic keyword router. It lets the whole agent
+  run offline with no keys, so the demo and tests are reproducible.
+- ``llm``: an Anthropic function-calling router over the same tool registry. If
+  ``llm`` is selected but no ``ANTHROPIC_API_KEY`` is present, the SDK is missing,
+  or the call fails, the router logs a warning and falls back to keyword routing.
+
+Both return the same ``ToolCall(tool, args, rationale, notes)`` shape, so the
+agent loop and the policy gate never change. Whichever router runs, the policy
+gate still stops every gated action, so a misrouted gated call is still safe.
 """
 
 from __future__ import annotations
 
+import logging
+import os
 import re
 from dataclasses import dataclass, field
+
+from src import llm
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -21,6 +35,25 @@ class ToolCall:
 
 
 def route(message: str) -> ToolCall:
+    """Route a message to a tool using the configured backend.
+
+    ROUTER_BACKEND=llm uses the Anthropic function-calling router; anything else
+    (default) uses the keyword router. A requested LLM router that cannot run
+    degrades to the keyword router rather than failing.
+    """
+    backend = os.getenv("ROUTER_BACKEND", "keyword").lower()
+    if backend == "llm":
+        try:
+            return llm_route(message)
+        except Exception as exc:  # noqa: BLE001 - any failure must degrade, not crash
+            logger.warning(
+                "ROUTER_BACKEND=llm unavailable (%s); falling back to keyword router.",
+                exc,
+            )
+    return keyword_route(message)
+
+
+def keyword_route(message: str) -> ToolCall:
     m = message.lower().strip()
 
     # Questions go to the knowledge base, even if they mention "invoice"/"tax".
@@ -107,3 +140,206 @@ def _line_items_with_notes(m: str):
                 "amount was assumed; confirm before finalizing.")
         return [{"description": "Service call", "amount": 150.0}], [note]
     return [{"description": "Service call", "amount": amt}], []
+
+
+# --------------------------------------------------------------------------- #
+# LLM router: Anthropic function calling over the same tool registry.
+# --------------------------------------------------------------------------- #
+# One tool definition per registered tool. The model picks exactly one (tool
+# choice is forced), which keeps routing inside the policy-governed registry.
+_LINE_ITEMS_SCHEMA = {
+    "type": "array",
+    "description": "Line items, each an amount in dollars with a description.",
+    "items": {
+        "type": "object",
+        "properties": {
+            "description": {"type": "string"},
+            "amount": {"type": "number"},
+        },
+    },
+}
+
+_LLM_TOOLS = [
+    {
+        "name": "knowledge_base",
+        "description": (
+            "Answer a policy, tax, billing, or company-rules question from the "
+            "grounded Asantico knowledge base. Use for questions, even if they "
+            "mention an invoice or tax, when the user is asking rather than "
+            "requesting a document or a send."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"query": {"type": "string"}},
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "query_jobs",
+        "description": "Look up existing job or work-order records, optionally for one property.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"property": {"type": "string"}},
+        },
+    },
+    {
+        "name": "compute_tax",
+        "description": "Compute Seattle sales tax (10.55%) on a subtotal amount.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"subtotal": {"type": "number"}},
+        },
+    },
+    {
+        "name": "triage_work_order",
+        "description": (
+            "Triage a new maintenance request into urgency and trade. Use when "
+            "the user reports a problem (a leak, something broken or not working)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"description": {"type": "string"}},
+            "required": ["description"],
+        },
+    },
+    {
+        "name": "generate_estimate",
+        "description": "Draft (not send) a priced estimate for a property and unit.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "property": {"type": "string"},
+                "unit": {"type": "string"},
+                "line_items": _LINE_ITEMS_SCHEMA,
+            },
+        },
+    },
+    {
+        "name": "generate_invoice",
+        "description": "Draft (not finalize) a priced invoice for a property and unit.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "property": {"type": "string"},
+                "unit": {"type": "string"},
+                "line_items": _LINE_ITEMS_SCHEMA,
+            },
+        },
+    },
+    {
+        "name": "draft_client_message",
+        "description": (
+            "Draft (do NOT send) a brief client message for a manager to review. "
+            "Use only when the operator explicitly asks to draft or write a message "
+            "without sending it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "manager": {"type": "string"},
+                "subject": {"type": "string"},
+            },
+        },
+    },
+    {
+        "name": "finalize_invoice",
+        "description": (
+            "GATED. Finalize a drafted invoice into a billable PDF. Requires human "
+            "approval before it runs."
+        ),
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "send_client_message",
+        "description": (
+            "GATED. Send a message or update to a client. The property managers "
+            "(for example Saniya and Andrew) are the clients, so 'send an update to "
+            "Saniya' is a client send. Choose this whenever the operator asks to "
+            "send, email, or deliver a message. Requires human approval before it runs."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string"},
+                "subject": {"type": "string"},
+                "body": {"type": "string"},
+            },
+        },
+    },
+]
+
+_LLM_SYSTEM = (
+    "You are the router for Asantico's operations agent. Choose exactly one tool "
+    "that best handles the operator's message. Route plain questions to "
+    "knowledge_base. The property managers (for example Saniya and Andrew) are the "
+    "clients: when the operator asks to send, email, or deliver a message or update "
+    "to a manager or client, choose send_client_message. Choose draft_client_message "
+    "only when the operator explicitly asks to draft or write a message without "
+    "sending it. Use generate_estimate or generate_invoice to draft documents and "
+    "finalize_invoice to finalize one. Selecting a gated tool is fine; a human "
+    "approves before it runs, so never avoid the correct tool out of caution."
+)
+
+
+def _manager_from(m: str) -> str:
+    return "Saniya" if "saniya" in m else "Andrew" if "andrew" in m else "the manager"
+
+
+def _complete_args(tool: str, message: str, llm_args: dict) -> tuple[dict, list]:
+    """Backfill required arguments the model may have omitted, reusing the same
+    deterministic extractors as the keyword router. This guarantees the selected
+    tool is executable and that an assumed price is still surfaced as a note."""
+    m = message.lower().strip()
+    args = dict(llm_args or {})
+    notes: list = []
+
+    if tool == "knowledge_base":
+        args.setdefault("query", message)
+    elif tool == "triage_work_order":
+        args.setdefault("description", message)
+    elif tool == "compute_tax":
+        args.setdefault("subtotal", _extract_amount(m) or 0.0)
+    elif tool in ("generate_estimate", "generate_invoice"):
+        prop, unit = _extract_property_unit(m)
+        args.setdefault("property", prop)
+        args.setdefault("unit", unit)
+        if not args.get("line_items"):
+            items, notes = _line_items_with_notes(m)
+            args["line_items"] = items
+    elif tool == "draft_client_message":
+        args.setdefault("manager", _manager_from(m))
+        args.setdefault("subject", "Job update")
+    elif tool == "send_client_message":
+        args.setdefault("to", _manager_from(m))
+        args.setdefault("subject", "Job update")
+        args.setdefault("body", "Work completed; documentation ready for review.")
+    elif tool == "query_jobs":
+        args.setdefault("property", _extract_property_unit(m)[0])
+    # finalize_invoice takes no required args.
+    return args, notes
+
+
+def llm_route(message: str) -> ToolCall:
+    """Route via Anthropic function calling. Raises on any failure so the caller
+    can fall back to the keyword router."""
+    client = llm.get_client()
+    response = client.messages.create(
+        model=llm.model_name(),
+        max_tokens=512,
+        system=_LLM_SYSTEM,
+        tools=_LLM_TOOLS,
+        tool_choice={"type": "any"},  # force the model to select a registered tool
+        messages=[{"role": "user", "content": message}],
+    )
+
+    tool_use = next((b for b in response.content if b.type == "tool_use"), None)
+    if tool_use is None:
+        raise RuntimeError("LLM router returned no tool call")
+
+    args, notes = _complete_args(tool_use.name, message, dict(tool_use.input or {}))
+    return ToolCall(
+        tool_use.name,
+        args,
+        f"LLM router ({llm.model_name()}) selected {tool_use.name}.",
+        notes,
+    )

@@ -20,8 +20,13 @@ def _assert_tool_shape(result):
 
 
 def test_offline_backend_returns_sources(monkeypatch):
-    """The offline backend answers a known query and cites a source, no deps."""
+    """The offline backend answers a known query and cites a source, no deps.
+
+    KB_GROUNDED=0 keeps this path dependency-free and deterministic even when a key
+    is present, so the answer is the raw retrieved snippet (which contains the rate),
+    not non-deterministic model prose."""
     monkeypatch.setenv("KB_BACKEND", "offline")
+    monkeypatch.setenv("KB_GROUNDED", "0")
     result = knowledge_base("What is the Seattle sales tax rate?")
     _assert_tool_shape(result)
     assert "10.55" in result["answer"]
@@ -40,9 +45,20 @@ def test_rag_backend_returns_expected_source(monkeypatch):
 
 
 def test_unknown_backend_uses_offline(monkeypatch):
-    """An unrecognized KB_BACKEND value falls through to the offline backend."""
+    """An unrecognized or unset KB_BACKEND falls through to the offline retriever.
+
+    Backend selection is verified on the deterministic part of the result, the
+    retrieved sources (files, order, scores), not the generated answer prose, which
+    is non-deterministic when grounded generation is active. So this holds whether
+    or not a key is present."""
+    query = "Is labor taxable?"
+
     monkeypatch.setenv("KB_BACKEND", "offline")
-    default = knowledge_base("Is labor taxable?")
+    offline = knowledge_base(query)
+    monkeypatch.setenv("KB_BACKEND", "totally-unknown-backend")
+    unknown = knowledge_base(query)
     monkeypatch.delenv("KB_BACKEND", raising=False)
-    unset = knowledge_base("Is labor taxable?")
-    assert default == unset
+    unset = knowledge_base(query)
+
+    assert offline["sources"]  # the offline retriever returned something
+    assert offline["sources"] == unknown["sources"] == unset["sources"]

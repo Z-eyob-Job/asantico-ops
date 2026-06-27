@@ -27,6 +27,8 @@ import re
 import sys
 from pathlib import Path
 
+from src import llm
+
 logger = logging.getLogger(__name__)
 
 KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", "knowledge")
@@ -138,6 +140,45 @@ def _rag_knowledge_base(query: str, top_k: int) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# Grounded answer generation (optional, requires a model).
+# --------------------------------------------------------------------------- #
+def _ground_answer(query: str, hits: list[dict]) -> str | None:
+    """Generate a short natural-language answer grounded in the retrieved sources.
+
+    Returns None (so the caller keeps the retrieved snippets as the answer) when
+    no key/SDK is available, generation is disabled via KB_GROUNDED, or the call
+    fails. The sources are always preserved by the caller either way.
+    """
+    if not hits or not llm.have_key():
+        return None
+    if os.getenv("KB_GROUNDED", "auto").lower() in ("0", "off", "false", "no"):
+        return None
+    try:
+        client = llm.get_client()
+        context = "\n\n".join(f"[{h['source']}]\n{h['text']}" for h in hits)
+        resp = client.messages.create(
+            model=llm.model_name(),
+            max_tokens=300,
+            system=(
+                "You answer Asantico operations questions using only the provided "
+                "sources. Write a short, direct answer of one to three sentences "
+                "grounded in those sources. If they do not contain the answer, say "
+                "so plainly. Do not use em dashes."
+            ),
+            messages=[
+                {"role": "user", "content": f"Question: {query}\n\nSources:\n{context}"}
+            ],
+        )
+        text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        return text or None
+    except Exception as exc:  # noqa: BLE001 - generation is best-effort; degrade quietly
+        logger.warning(
+            "Grounded answer generation failed (%s); using retrieved snippets.", exc
+        )
+        return None
+
+
+# --------------------------------------------------------------------------- #
 # Public tool entrypoint.
 # --------------------------------------------------------------------------- #
 def knowledge_base(query: str, top_k: int = 3) -> dict:
@@ -145,14 +186,23 @@ def knowledge_base(query: str, top_k: int = 3) -> dict:
 
     Backend is chosen by KB_BACKEND ("offline" by default, "rag" for the real
     pipeline). A requested "rag" backend that cannot load falls back to offline.
+    When an Anthropic key is available, a short grounded answer is generated from
+    the retrieved sources; with no key the retrieved snippets are the answer.
     """
     backend = os.getenv("KB_BACKEND", "offline").lower()
+    result = None
     if backend == "rag":
         try:
-            return _rag_knowledge_base(query, top_k)
+            result = _rag_knowledge_base(query, top_k)
         except Exception as exc:  # noqa: BLE001 - any failure must degrade, not crash
             logger.warning(
                 "KB_BACKEND=rag unavailable (%s); falling back to offline retrieval.",
                 exc,
             )
-    return _offline_knowledge_base(query, top_k)
+    if result is None:
+        result = _offline_knowledge_base(query, top_k)
+
+    grounded = _ground_answer(query, result["sources"])
+    if grounded:
+        result["answer"] = grounded
+    return result
