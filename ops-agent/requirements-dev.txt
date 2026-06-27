@@ -1,0 +1,10 @@
+# Development and test tooling for ops-agent. Installs the runtime requirements
+# plus the test runner and linter that CI uses, so `pytest` and `ruff check`
+# work from a clean install:
+#
+#   pip install -r ops-agent/requirements-dev.txt
+#
+# Versions match .github/workflows/ci.yml (pytest and ruff unpinned).
+-r requirements.txt
+pytest
+ruff

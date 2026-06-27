@@ -22,11 +22,12 @@ Requires Python 3.11 or newer.
 ```
 python -m venv .venv
 source .venv/bin/activate
-pip install -r ops-agent/requirements.txt
+pip install -r ops-agent/requirements-dev.txt   # runtime plus pytest and ruff for the tests
 pip install -r knowledge-rag/requirements.txt
 ```
 
-The core system needs nothing further. Two optional upgrades are enabled with
+To run only the agent (no tests), `pip install -r ops-agent/requirements.txt` is
+enough. The core system needs nothing further. Two optional upgrades are enabled with
 environment variables, kept in a local `ops-agent/.env` file that is never committed:
 
 ```

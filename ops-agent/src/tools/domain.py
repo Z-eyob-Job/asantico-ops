@@ -12,8 +12,15 @@ tenant names on documents, brief client messages with no dollar amounts.
 
 from __future__ import annotations
 
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
 SEATTLE_TAX_RATE = 0.1055
 COMPANY = "Asantico"
+# Per-field confidence below which the real escalation rule sends a case to review.
+TRIAGE_THRESHOLD = float(os.getenv("TRIAGE_THRESHOLD", "0.7"))
 
 # Wire the real asantico-cli tax engine if it is importable. The engine computes
 # tax per line item with Decimal precision, which is the production behavior.
@@ -39,6 +46,17 @@ try:
     PDF_ENGINE = "asantico-cli"
 except ImportError:  # pragma: no cover - exercised by the offline fallback path
     PDF_ENGINE = "builtin"
+
+# Wire the real asantico-cli triage escalation rule if it is importable. The rule
+# (should_escalate) is pure and needs no key; the model-backed classifier behind
+# it does (used only when a key is present, see triage_work_order).
+try:
+    from asantico_cli.domain.triage import TriageResult as _TriageResult
+    from asantico_cli.domain.triage import should_escalate as _should_escalate
+
+    TRIAGE_RULE = "asantico-cli"
+except ImportError:  # pragma: no cover - exercised by the offline fallback path
+    TRIAGE_RULE = "builtin"
 
 
 def _totals(amounts: list[float]) -> tuple[float, float, float]:
@@ -66,18 +84,88 @@ def compute_tax(subtotal: float, rate: float = SEATTLE_TAX_RATE) -> dict:
             "total": total, "engine": TAX_ENGINE}
 
 
-def triage_work_order(description: str) -> dict:
-    """Classify urgency and trade. Real version routes by urgency to a model."""
+_EMERGENCY_WORDS = ("leak", "flood", "gas", "no heat", "sparking", "fire", "burst")
+
+
+def _keyword_classify(description: str) -> tuple[str, str]:
+    """Deterministic, dependency-free urgency and trade classification."""
     text = description.lower()
-    emergency = any(w in text for w in
-                    ("leak", "flood", "gas", "no heat", "sparking", "fire", "burst"))
+    emergency = any(w in text for w in _EMERGENCY_WORDS)
     trade = ("plumbing" if any(w in text for w in ("leak", "drain", "toilet", "pipe"))
              else "electrical" if any(w in text for w in ("outlet", "spark", "breaker"))
              else "general")
-    return {"urgency": "emergency" if emergency else "routine",
-            "trade": trade,
-            "escalate": emergency,
-            "note": "Escalated to human immediately." if emergency else "Queued for scheduling."}
+    return ("emergency" if emergency else "routine"), trade
+
+
+def _triage_dict(urgency: str, trade: str, escalate: bool) -> dict:
+    """Assemble the tool's stable return shape (urgency, trade, escalate, note)."""
+    return {
+        "urgency": urgency,
+        "trade": trade,
+        "escalate": escalate,
+        "note": "Escalated to human immediately." if escalate else "Queued for scheduling.",
+    }
+
+
+def _offline_triage(description: str) -> dict:
+    """Keyword classification with a built-in rule: emergencies escalate."""
+    urgency, trade = _keyword_classify(description)
+    return _triage_dict(urgency, trade, escalate=urgency == "emergency")
+
+
+def _real_triage(description: str) -> dict:
+    """Triage with the real asantico-cli engine.
+
+    The escalation decision always uses the real should_escalate rule (pure, no
+    key). Classification comes from the model-backed classifier when an API key is
+    present; otherwise it falls back to keyword classification, marking an
+    undetermined ("general") trade as low confidence so the real rule escalates
+    uncertain cases for human review.
+    """
+    if TRIAGE_RULE != "asantico-cli":
+        raise RuntimeError("asantico-cli is not installed")
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        # Model-backed classifier: needs the SDK, a key, and network. Any failure
+        # raises and is caught by triage_work_order, which falls back to offline.
+        from asantico_cli.infra.llm import triage_request
+
+        result = triage_request(description, live=True, threshold=TRIAGE_THRESHOLD)
+        urgency, trade = result.urgency, result.trade
+    else:
+        urgency, trade = _keyword_classify(description)
+        result = _TriageResult(
+            urgency=urgency,
+            trade=trade,
+            property_name=None,
+            unit=None,
+            tenant_contact=None,
+            issue_summary=description.strip()[:120],
+            confidence={"urgency": 1.0, "trade": 1.0 if trade != "general" else 0.4},
+        )
+
+    return _triage_dict(urgency, trade, _should_escalate(result, TRIAGE_THRESHOLD))
+
+
+def triage_work_order(description: str) -> dict:
+    """Classify a work order into urgency and trade and decide escalation.
+
+    TRIAGE_ENGINE selects the backend: "offline" (default) is deterministic
+    keyword classification with a built-in escalation rule; "real" uses the
+    asantico-cli engine, applying the real should_escalate rule for the escalation
+    decision and the model-backed classifier only when an API key is present. A
+    requested "real" engine that is unavailable logs a warning and falls back to
+    offline. The return shape is unchanged either way.
+    """
+    engine = os.getenv("TRIAGE_ENGINE", "offline").lower()
+    if engine == "real":
+        try:
+            return _real_triage(description)
+        except Exception as exc:  # noqa: BLE001 - degrade to offline, never crash
+            logger.warning(
+                "TRIAGE_ENGINE=real unavailable (%s); using keyword triage.", exc
+            )
+    return _offline_triage(description)
 
 
 def generate_estimate(property: str, unit: str, line_items: list[dict]) -> dict:

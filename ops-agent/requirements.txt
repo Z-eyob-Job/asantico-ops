@@ -1,9 +1,13 @@
-# The offline demo (CLI channel) needs NO dependencies beyond the standard library.
+# Runtime dependencies for ops-agent.
+#
+# The offline CLI demo and the Telegram channel use only the Python standard
+# library, but two declared, always-importable surfaces need third-party packages:
+#   - mcp:              the MCP server (src/mcp_server.py imports it at module load,
+#                       which the test suite imports during collection)
+#   - llama-index-core: the real RAG knowledge backend (KB_BACKEND=rag) and its test
+# Versions match .github/workflows/ci.yml (mcp unpinned, llama-index-core pinned).
+mcp
+llama-index-core==0.14.22
 
-# The Telegram channel uses only the standard library (urllib long-polling), so it
-# needs NO dependency; set TELEGRAM_BOT_TOKEN and run `python -m src.gateway telegram`.
-
-# Week 8 production dependencies (uncomment as channels/LLM are wired):
-# llama-index-core==0.14.22          # real knowledge_base RAG pipeline
-# langgraph                          # agent loop with HITL interrupt
-# anthropic                          # LLM router + grounded generation
+# Optional, enabled by environment variables; not needed for the core system or tests:
+# anthropic          # ANTHROPIC_API_KEY: LLM router + grounded answer generation
