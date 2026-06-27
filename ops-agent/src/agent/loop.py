@@ -21,6 +21,7 @@ class Conversation:
     pending: ToolCall | None = None
     history: list = field(default_factory=list)
     last_draft: dict | None = None  # most recent drafted client message, by conv
+    last_invoice: dict | None = None  # most recent drafted invoice, for finalize
 
 
 class Agent:
@@ -71,6 +72,13 @@ class Agent:
                 call.args["subject"] = convo.last_draft.get("subject", call.args.get("subject"))
                 call.args["body"] = convo.last_draft.get("body", call.args.get("body"))
                 log_event("send_uses_reviewed_draft", conv_id, trace_id, tool=call.tool)
+            # Finalize the exact invoice the operator drafted, so the approved
+            # PDF matches what they reviewed.
+            if call.tool == "finalize_invoice" and convo.last_invoice is not None:
+                call.args["property"] = convo.last_invoice.get("property", "")
+                call.args["unit"] = convo.last_invoice.get("unit", "")
+                call.args["line_items"] = convo.last_invoice.get("line_items", [])
+                log_event("finalize_uses_drafted_invoice", conv_id, trace_id, tool=call.tool)
             convo.pending = call
             log_event("approval_requested", conv_id, trace_id, tool=call.tool, args=call.args)
             return policy.approval_prompt(call.tool, call.args)
@@ -79,6 +87,8 @@ class Agent:
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         if call.tool == "draft_client_message":
             convo.last_draft = result  # remember the reviewed draft for a later send
+        if call.tool == "generate_invoice":
+            convo.last_invoice = result  # remember the invoice for a later finalize
         reply = self._format(call.tool, result, approved=False)
         if call.notes:
             reply += "\nNote: " + " ".join(call.notes)

@@ -118,6 +118,37 @@ def test_deferred_channels_fail_clearly():
         list(WhatsAppChannel().listen())
 
 
+def test_finalize_is_gated_and_uses_drafted_invoice():
+    """Finalizing an invoice is gated, and after approval it finalizes the exact
+    invoice the operator drafted."""
+    a = Agent()
+    a.handle("c1", "create an invoice for VEER LOFTS unit 208 for $420")
+    prompt = a.handle("c1", "finalize the invoice")
+    assert "approval needed" in prompt.lower()
+    done = a.handle("c1", "approve")
+    assert "finalized" in done.lower()
+
+
+def test_real_pdf_engine_writes_a_file(tmp_path, monkeypatch):
+    """When asantico-cli is installed, finalize renders a real PDF file.
+    Skipped automatically when the engine is not present."""
+    import pytest
+    pytest.importorskip("asantico_cli")
+    pytest.importorskip("reportlab")
+    from src.tools import domain
+    if domain.PDF_ENGINE != "asantico-cli":
+        pytest.skip("PDF engine not active")
+    monkeypatch.chdir(tmp_path)
+    out = domain.finalize_invoice(
+        property="VEER LOFTS", unit="208",
+        line_items=[{"description": "Service call", "amount": 420.0}],
+        invoice_id="INV-0001",
+    )
+    from pathlib import Path
+    assert out["engine"] == "asantico-cli"
+    assert Path(out["pdf"]).exists()
+
+
 def test_unregistered_tool_is_blocked():
     import pytest
     with pytest.raises(PermissionError):

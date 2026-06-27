@@ -27,6 +27,19 @@ try:
 except ImportError:  # pragma: no cover - exercised by the offline fallback path
     TAX_ENGINE = "builtin"
 
+# Wire the real asantico-cli ReportLab PDF engine if it is importable.
+try:
+    from datetime import date as _date
+    from pathlib import Path as _Path
+
+    from asantico_cli.domain.models import Document as _Document
+    from asantico_cli.domain.models import Property as _Property
+    from asantico_cli.infra.pdf import render_pdf as _render_pdf
+
+    PDF_ENGINE = "asantico-cli"
+except ImportError:  # pragma: no cover - exercised by the offline fallback path
+    PDF_ENGINE = "builtin"
+
 
 def _totals(amounts: list[float]) -> tuple[float, float, float]:
     """Return (subtotal, tax, total) for a list of line amounts.
@@ -83,10 +96,32 @@ def generate_invoice(property: str, unit: str, line_items: list[dict]) -> dict:
     return est
 
 
-def finalize_invoice(invoice_id: str) -> dict:
-    """GATED: writes the final PDF and marks billable. Needs approval."""
+def finalize_invoice(property: str = "", unit: str = "",
+                     line_items: list[dict] | None = None,
+                     invoice_id: str = "INV-0001") -> dict:
+    """GATED: writes the final PDF and marks billable. Needs approval.
+
+    Renders a real PDF with the asantico-cli ReportLab engine when it is
+    installed, otherwise returns a placeholder path so the offline demo and
+    tests still run end to end.
+    """
+    line_items = line_items or []
+    if PDF_ENGINE == "asantico-cli" and line_items:
+        items = [
+            _LineItem(description=li.get("description", "line"),
+                      quantity=_Decimal("1"), unit="flat",
+                      unit_price=_Decimal(str(li.get("amount", 0))))
+            for li in line_items
+        ]
+        doc = _Document(doc_type="invoice", doc_number=invoice_id,
+                        date=_date.today(),
+                        property=_Property(name=property or "Property"),
+                        line_items=items)
+        path = _render_pdf(doc, _Path("invoices"))
+        return {"invoice_id": invoice_id, "status": "finalized",
+                "pdf": str(path), "engine": PDF_ENGINE}
     return {"invoice_id": invoice_id, "status": "finalized",
-            "pdf": f"invoices/{invoice_id}.pdf"}
+            "pdf": f"invoices/{invoice_id}.pdf", "engine": PDF_ENGINE}
 
 
 def draft_client_message(manager: str, subject: str) -> dict:

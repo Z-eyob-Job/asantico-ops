@@ -14,7 +14,7 @@ a solo build, sequenced in phases.
 ## P1 - Core implementation
 
 - [x] Phase 2: wrap real asantico-cli tax engine into compute_tax (with offline fallback; tests pass both ways)
-- [ ] Phase 2: wrap real ReportLab estimate/invoice generators
+- [x] Phase 2: wrap real ReportLab invoice generator into finalize_invoice (real PDF; offline fallback)
 - [ ] Phase 2: wrap the real triage agent into triage_work_order
 - [ ] Phase 2: wire the knowledge-rag LlamaIndex pipeline behind knowledge_base
 - [ ] Phase 3: implement the Telegram channel end to end

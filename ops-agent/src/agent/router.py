@@ -29,6 +29,12 @@ def route(message: str) -> ToolCall:
             return ToolCall("knowledge_base", {"query": message},
                             "Question phrasing detected; answering from the knowledge base.")
 
+    # Finalize must be checked before the invoice branch, since "finalize the
+    # invoice" also contains the word "invoice". Finalize is gated.
+    if "finalize" in m:
+        return ToolCall("finalize_invoice", {},
+                        "User asked to finalize an invoice (gated).")
+
     # Approval / control words are handled by the loop, not the router.
     if any(w in m for w in ("invoice",)) and "send" not in m:
         prop, unit = _extract_property_unit(m)
