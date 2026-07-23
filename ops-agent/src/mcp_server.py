@@ -35,6 +35,15 @@ TOOL_SCHEMAS: dict[str, dict] = {
         "properties": {"query": {"type": "string", "description": "Question to answer from the Asantico knowledge base."}},
         "required": ["query"],
     },
+    "load_work_order": {
+        "type": "object",
+        "properties": {"path": {"type": "string", "description": "Path to an exported work-order file (.pdf or .txt) on this machine."}},
+        "required": ["path"],
+    },
+    "fetch_email_work_order": {
+        "type": "object",
+        "properties": {"query": {"type": "string", "description": "Optional filter that must appear in the subject or attachment name."}},
+    },
     "compute_tax": {
         "type": "object",
         "properties": {"subtotal": {"type": "number", "description": "Pre-tax amount."}},
@@ -90,6 +99,8 @@ TOOL_SCHEMAS: dict[str, dict] = {
 
 TOOL_TITLES = {
     "knowledge_base": "Knowledge base",
+    "load_work_order": "Load work order (parse a checklist export)",
+    "fetch_email_work_order": "Fetch work order from email (IMAP)",
     "compute_tax": "Compute Seattle tax",
     "triage_work_order": "Triage work order",
     "generate_estimate": "Generate estimate (draft)",

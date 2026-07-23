@@ -178,7 +178,10 @@ def _mint_doc_number(prefix: str, unit: str) -> str:
 
 
 def _render_document(doc_type: str, doc_number: str, property: str, unit: str,
-                     line_items: list[dict], out_dir: str) -> str | None:
+                     line_items: list[dict], out_dir: str,
+                     scope_items: list[str] | None = None,
+                     work_order: str | None = None,
+                     job_site: list[str] | None = None) -> str | None:
     """Render the document in the real Asantico letterhead format (ReportLab).
 
     Returns the written PDF path, or None when the renderer is unavailable so
@@ -195,35 +198,49 @@ def _render_document(doc_type: str, doc_number: str, property: str, unit: str,
 
         return _render_letterhead(doc_type, doc_number, date.today(),
                                   property or "Property", unit, line_items,
-                                  out_dir)
+                                  out_dir, work_order=work_order or None,
+                                  job_site_lines=job_site or None,
+                                  scope_items=scope_items or None)
     except Exception as exc:  # noqa: BLE001 - degrade to no-PDF, never crash
         logger.warning("PDF renderer unavailable (%s); skipping render.", exc)
         return None
 
 
-def generate_estimate(property: str, unit: str, line_items: list[dict]) -> dict:
+def generate_estimate(property: str, unit: str, line_items: list[dict],
+                      scope_items: list[str] | None = None,
+                      work_order: str | None = None,
+                      job_site: list[str] | None = None) -> dict:
     amounts = [li.get("amount", 0) for li in line_items]
     subtotal, tax, total = _totals(amounts)
     result = {"document": "estimate", "company": COMPANY, "property": property,
               "unit": unit, "line_items": line_items,
+              "scope_items": scope_items or [], "work_order": work_order or "",
+              "job_site": job_site or [],
               "subtotal": subtotal, "rate": SEATTLE_TAX_RATE, "tax": tax,
               "total": total, "engine": TAX_ENGINE,
               "status": "draft", "note": "Draft only. No tenant name included."}
     # An estimate is a client-facing draft, so render the real document at draft
     # time. Invoices stay numbers-only until the gated finalize step approves them.
     pdf = _render_document("estimate", _mint_doc_number("EST", unit),
-                           property, unit, line_items, "estimates")
+                           property, unit, line_items, "estimates",
+                           scope_items=scope_items, work_order=work_order,
+                           job_site=job_site)
     if pdf:
         result["pdf"] = pdf
         result["pdf_engine"] = PDF_ENGINE
     return result
 
 
-def generate_invoice(property: str, unit: str, line_items: list[dict]) -> dict:
+def generate_invoice(property: str, unit: str, line_items: list[dict],
+                     scope_items: list[str] | None = None,
+                     work_order: str | None = None,
+                     job_site: list[str] | None = None) -> dict:
     amounts = [li.get("amount", 0) for li in line_items]
     subtotal, tax, total = _totals(amounts)
     return {"document": "invoice", "company": COMPANY, "property": property,
             "unit": unit, "line_items": line_items,
+            "scope_items": scope_items or [], "work_order": work_order or "",
+            "job_site": job_site or [],
             "subtotal": subtotal, "rate": SEATTLE_TAX_RATE, "tax": tax,
             "total": total, "engine": TAX_ENGINE,
             "status": "draft", "note": "Draft only. No tenant name included."}
@@ -231,7 +248,10 @@ def generate_invoice(property: str, unit: str, line_items: list[dict]) -> dict:
 
 def finalize_invoice(property: str = "", unit: str = "",
                      line_items: list[dict] | None = None,
-                     invoice_id: str = "INV-0001") -> dict:
+                     invoice_id: str = "INV-0001",
+                     scope_items: list[str] | None = None,
+                     work_order: str | None = None,
+                     job_site: list[str] | None = None) -> dict:
     """GATED: writes the final PDF and marks billable. Needs approval.
 
     Renders a real PDF with the asantico-cli ReportLab engine when it is
@@ -242,7 +262,8 @@ def finalize_invoice(property: str = "", unit: str = "",
     if invoice_id == "INV-0001":  # default: mint the dated Asantico number
         invoice_id = _mint_doc_number("INV", unit)
     path = _render_document("invoice", invoice_id, property, unit,
-                            line_items, "invoices")
+                            line_items, "invoices", scope_items=scope_items,
+                            work_order=work_order, job_site=job_site)
     if path:
         return {"invoice_id": invoice_id, "status": "finalized",
                 "pdf": path, "engine": PDF_ENGINE}
@@ -250,11 +271,37 @@ def finalize_invoice(property: str = "", unit: str = "",
             "pdf": f"invoices/{invoice_id}.pdf", "engine": PDF_ENGINE}
 
 
-def draft_client_message(manager: str, subject: str) -> dict:
-    """DRAFT: brief message, no dollar amounts, for human approval."""
-    body = (f"Hi {manager}, the work has been completed and the documentation is "
-            f"ready for your review. Please let me know if you need anything else. "
-            f"Thank you, {COMPANY}.")
+def draft_client_message(manager: str, subject: str, context: str = "") -> dict:
+    """DRAFT: brief message, no dollar amounts, for human approval.
+
+    When a local Ollama model is running, the body is written by it with the
+    job context, then checked against the business rules (no dollar amounts,
+    no em dashes); any violation or failure falls back to the fixed template.
+    Either way it is a draft: nothing sends without the approval gate.
+    """
+    template = (f"Hi {manager}, the work has been completed and the documentation is "
+                f"ready for your review. Please let me know if you need anything else. "
+                f"Thank you, {COMPANY}.")
+    body = template
+    try:
+        from src import local_llm
+
+        if local_llm.available():
+            drafted = local_llm.chat(
+                "You write brief, warm, professional emails for Asantico, a "
+                "Seattle property-maintenance business, to a property manager. "
+                "2-4 sentences. HARD RULES: never mention prices or dollar "
+                "amounts; never use em dashes; sign off with 'Thank you, "
+                "Asantico.' Output only the email body.",
+                f"Recipient: {manager}. Subject: {subject}. "
+                + (f"Job context: {context}" if context else
+                   "Context: maintenance work completed, documentation ready."),
+                timeout=30.0).strip()
+            if drafted and "$" not in drafted and "\u2014" not in drafted \
+                    and len(drafted) < 800:
+                body = drafted
+    except Exception as exc:  # noqa: BLE001 - degrade to the template, never crash
+        logger.warning("Local draft generation unavailable (%s); using template.", exc)
     return {"to": manager, "subject": subject, "body": body, "status": "draft"}
 
 

@@ -10,7 +10,9 @@ def test_mcp_lists_all_registered_tools():
     names = {t.name for t in tools}
     assert "knowledge_base" in names
     assert "send_client_message" in names
-    assert len(names) == 9
+    assert "load_work_order" in names
+    assert "fetch_email_work_order" in names
+    assert len(names) == 11
 
 
 def test_mcp_gated_tool_blocked_without_approval():

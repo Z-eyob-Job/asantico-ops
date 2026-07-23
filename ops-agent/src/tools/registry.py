@@ -5,10 +5,13 @@ one place."""
 from __future__ import annotations
 
 from src.tools import domain
+from src.tools import email_workorders, workorder
 from src.tools.knowledge_base import knowledge_base
 
 REGISTRY = {
     "knowledge_base": knowledge_base,
+    "load_work_order": workorder.load_work_order,
+    "fetch_email_work_order": email_workorders.fetch_email_work_order,
     "query_jobs": domain.query_jobs,
     "compute_tax": domain.compute_tax,
     "triage_work_order": domain.triage_work_order,

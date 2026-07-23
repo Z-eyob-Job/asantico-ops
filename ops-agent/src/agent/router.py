@@ -16,6 +16,7 @@ gate still stops every gated action, so a misrouted gated call is still safe.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -50,17 +51,137 @@ def route(message: str) -> ToolCall:
                 "ROUTER_BACKEND=llm unavailable (%s); falling back to keyword router.",
                 exc,
             )
+    if backend in ("local", "ollama"):
+        try:
+            return local_route(message)
+        except Exception as exc:  # noqa: BLE001 - any failure must degrade, not crash
+            logger.warning(
+                "ROUTER_BACKEND=local unavailable (%s); falling back to keyword router.",
+                exc,
+            )
     return keyword_route(message)
+
+
+_LOCAL_ROUTER_SYSTEM = """You route one operator message for a Seattle \
+property-maintenance business to exactly one tool. Reply with ONLY a JSON \
+object: {"tool": <name>, "args": {...}, "rationale": <short string>}.
+
+Tools and their args:
+- knowledge_base {"query": str}: questions about policy, tax, procedures.
+- load_work_order {"path": str, "query": str}: load/find a work-order file. \
+Empty path means search Downloads for the newest one; query filters by name.
+- fetch_email_work_order {"query": str}: pull the newest work-order attachment \
+from email.
+- triage_work_order {"description": str}: classify a new problem report.
+- compute_tax {"subtotal": number}
+- generate_estimate {"property": str, "unit": str, "line_items": [{"description": str, "amount": number}]}: \
+new estimate. To EDIT the current draft use {"edit": {"add": {"description": str, "amount": number}}} \
+and/or {"edit": {"target_subtotal": number}} instead.
+- generate_invoice: same args as generate_estimate.
+- draft_client_message {"manager": str, "subject": str}
+- send_client_message {"to": str, "subject": str, "body": str}: GATED.
+- finalize_invoice {}: GATED.
+- query_jobs {"property": str}
+
+Rules: pick the single best tool. "tool" MUST be one of the names above, \
+never null. Omit args you cannot infer (use "" or []). Never invent prices. \
+If the message edits an existing draft (add lines, change the total), use the \
+edit payload; "add" may be a LIST for compound requests. If it is a question, \
+use knowledge_base.
+
+Examples:
+"add 100 and add materials which is $30" -> {"tool": "generate_estimate", \
+"args": {"edit": {"add": [{"description": "Additional charge", "amount": 100}, \
+{"description": "Materials", "amount": 30}]}}, "rationale": "two line items added"}
+"the tenant says the heater is dead" -> {"tool": "triage_work_order", \
+"args": {"description": "the tenant says the heater is dead"}, "rationale": \
+"new problem report"}"""
+
+
+def local_route(message: str) -> ToolCall:
+    """Route with a local Ollama model (no cloud, no key). Raises on any
+    problem so route() falls back to the keyword router."""
+    from src import local_llm
+    from src.tools import registry
+
+    if not local_llm.available():
+        raise RuntimeError("Ollama is not running on localhost")
+    tool, args, data = None, {}, {}
+    for attempt in (1, 2):  # one retry: small local models misfire occasionally
+        raw = local_llm.chat(_LOCAL_ROUTER_SYSTEM, message, json_mode=True)
+        data = json.loads(raw)
+        tool = data.get("tool")
+        args = data.get("args") or {}
+        if tool in registry.REGISTRY and isinstance(args, dict):
+            break
+    if tool not in registry.REGISTRY or not isinstance(args, dict):
+        raise ValueError(f"local router proposed unknown tool: {tool!r}")
+    return ToolCall(tool, args, data.get("rationale", "local model routing"),
+                    ["routed by local model (" + os.getenv("LOCAL_MODEL", "qwen2.5:3b") + ")"])
 
 
 def keyword_route(message: str) -> ToolCall:
     m = message.lower().strip()
+
+    # Work-order ingestion comes first: "workorder <file>" (also "load work
+    # order <file>"). The path keeps the original casing from the raw message.
+    for prefix in ("workorder ", "load work order "):
+        if m.startswith(prefix):
+            path = message.strip()[len(prefix):].strip()
+            return ToolCall("load_work_order", {"path": path},
+                            "Operator supplied a work-order file to ingest.")
+
+    # "find the latest work order" (no path): search Downloads/Desktop for the
+    # newest work-order-looking file. Checked before triage's "work order" rule.
+    if "work order" in m and "email" not in m \
+            and any(w in m for w in ("find", "load", "latest", "newest", "download", "search", "grab", "pull")):
+        needle = ""
+        nm = re.search(r"(?:for|about)\s+([a-z0-9 ]{3,30})$", m)
+        if nm:
+            needle = nm.group(1).strip()
+        return ToolCall("load_work_order", {"path": "", "query": needle},
+                        "Searching local folders for the newest work order.")
+
+    # "check email for work orders" / "get the work order from email": scan the
+    # inbox for the newest checklist attachment. Checked before the send rule
+    # so the word "email" here never routes to a gated send.
+    if "email" in m and any(w in m for w in ("check", "fetch", "get", "look", "read", "scan", "find")):
+        needle = ""
+        nm = re.search(r"(?:for|about)\s+([a-z0-9 ]{3,30})$", m)
+        if nm and "work order" not in nm.group(1):
+            needle = nm.group(1).strip()
+        return ToolCall("fetch_email_work_order", {"query": needle},
+                        "Operator asked to pull a work order from email.")
 
     # Questions go to the knowledge base, even if they mention "invoice"/"tax".
     if m.endswith("?") or re.match(r"(what|how|why|when|who|where|which|is|are|does|can)\b", m):
         if not any(w in m for w in ("create", "make", "generate", "draft", "send")):
             return ToolCall("knowledge_base", {"query": message},
                             "Question phrasing detected; answering from the knowledge base.")
+
+    # Edits to the current draft: "add materials which is 30", "add labor for
+    # 450", "make the total price 300". Routed as a re-generate with an edit
+    # payload; the loop merges it with the draft the operator is looking at.
+    edit: dict = {}
+    adds = []
+    for am in re.finditer(r"\badd (?:a |an |some |another )?([a-z][a-z /-]{1,40}?)(?:\s*,?\s*which is|\s+for|\s+at|\s+of|:)?\s*\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?\b", m):
+        desc = am.group(1).strip()
+        # strip filler so "another price on the materials" becomes "materials"
+        desc = re.sub(r"^(price on the |price for the |price on |price for |the )", "", desc).strip()
+        adds.append({"description": (desc or "Additional charge").title(),
+                     "amount": float(am.group(2))})
+    for am in re.finditer(r"\badd\s+\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?(?=\s|,|$|\band\b)", m):
+        amt = float(am.group(1))
+        if not any(a["amount"] == amt for a in adds):
+            adds.append({"description": "Additional charge", "amount": amt})
+    if adds:
+        edit["add"] = adds
+    tot_m = re.search(r"\b(?:make|set|change)\b.{0,30}?\b(?:total|price|subtotal)\b.{0,15}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)", m)
+    if tot_m:
+        edit["target_subtotal"] = float(tot_m.group(1))
+    if edit:
+        return ToolCall("generate_estimate", {"edit": edit},
+                        "Operator edited the current draft.")
 
     # Finalize must be checked before the invoice branch, since "finalize the
     # invoice" also contains the word "invoice". Finalize is gated.

@@ -21,6 +21,8 @@ class Risk(str, Enum):  # noqa: UP042
 # Tool name -> risk class. New tools MUST be registered here or they are denied.
 TOOL_RISK = {
     "knowledge_base": Risk.READ,
+    "load_work_order": Risk.READ,
+    "fetch_email_work_order": Risk.READ,
     "query_jobs": Risk.READ,
     "compute_tax": Risk.READ,
     "triage_work_order": Risk.READ,
