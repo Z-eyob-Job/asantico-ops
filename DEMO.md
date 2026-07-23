@@ -30,7 +30,7 @@ HITL: the `send` produced an `approval_requested` event and did nothing until th
 operator replied `approve`, which produced `approval_granted` then `tool_executed`.
 
 Observability: every step is one structured log line with a trace id. The captured
-run is in `ops-agent/logs/agent.jsonl` (18 events). Example sequence for the gated
+run is in `ops-agent/logs/agent.jsonl` (one JSON line per step). Example sequence for the gated
 flow (trace ids abbreviated):
 
 ```

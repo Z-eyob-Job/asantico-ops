@@ -35,7 +35,32 @@ ANTHROPIC_API_KEY=...     # enables the LLM router and grounded answers
 TELEGRAM_BOT_TOKEN=...    # enables the live Telegram channel (from @BotFather)
 ```
 
+A third optional upgrade, voice input, is a package rather than a key:
+`pip install faster-whisper`. Voice notes are transcribed ON THIS MACHINE with a
+local Whisper model - no cloud speech API. The model weights download once on
+first use and are cached, so transcription works offline afterwards (field
+reality: job sites often have no signal).
+
 Load them into your shell before running with `set -a; source ops-agent/.env; set +a`.
+
+## Documents and voice
+
+Estimates and invoices render as real client-facing PDFs in the Asantico
+letterhead format (`src/tools/pdf_render.py`): BILL TO / JOB SITE blocks, scope
+of work, the priced line-item table with Seattle 10.55% tax on every line
+including labor, notes and terms, and a signature block. An estimate renders at
+draft time (it is a client-facing draft by definition); an invoice PDF only
+exists after the gated finalize step is approved, so the document trail matches
+the approval trail. Document numbers follow the shop convention
+`EST-YYYY-MMDD-UNIT`.
+
+Voice input works on both surfaces. In the CLI channel, `voice <audio-file>`
+transcribes a local recording (for example an iPhone voice memo AirDropped to
+this machine) - the fully offline path. On Telegram, send the bot a voice note;
+it is downloaded and transcribed locally, and the transcript is echoed back as
+"(heard: ...)" before the agent acts, so the operator always sees exactly what
+the agent will act on. Telegram queues messages sent with no signal and
+delivers them on reconnect, which makes dead-zone capture work end to end.
 
 ## Run
 
@@ -75,7 +100,7 @@ cd knowledge-rag && python -m knowledge_rag.ingest && python -m knowledge_rag.ev
 ```
 
 Current retrieval metrics on the ten-question fixed set: hit rate 0.900, mean
-reciprocal rank 0.800 (against a 0.80 bar), with per-query failure analysis written to
+reciprocal rank 0.850 (against a 0.80 bar), with per-query failure analysis written to
 `knowledge-rag/eval/evaluation_report.md`.
 
 ## Runtime switches

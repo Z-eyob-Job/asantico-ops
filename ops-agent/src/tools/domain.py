@@ -168,20 +168,65 @@ def triage_work_order(description: str) -> dict:
     return _offline_triage(description)
 
 
+def _mint_doc_number(prefix: str, unit: str) -> str:
+    """Mint a document number in the Asantico convention: EST-2026-0507-402
+    is the prefix, the date, and the unit the work is for."""
+    from datetime import date
+
+    today = date.today()
+    return f"{prefix}-{today:%Y}-{today:%m%d}-{unit or 'GEN'}"
+
+
+def _render_document(doc_type: str, doc_number: str, property: str, unit: str,
+                     line_items: list[dict], out_dir: str) -> str | None:
+    """Render the document in the real Asantico letterhead format (ReportLab).
+
+    Returns the written PDF path, or None when the renderer is unavailable so
+    the offline demo keeps running end to end without it. Documents never
+    include a tenant name (Asantico invariant); work is billed to the property
+    manager.
+    """
+    if not line_items:
+        return None
+    try:
+        from datetime import date
+
+        from src.tools.pdf_render import render_document as _render_letterhead
+
+        return _render_letterhead(doc_type, doc_number, date.today(),
+                                  property or "Property", unit, line_items,
+                                  out_dir)
+    except Exception as exc:  # noqa: BLE001 - degrade to no-PDF, never crash
+        logger.warning("PDF renderer unavailable (%s); skipping render.", exc)
+        return None
+
+
 def generate_estimate(property: str, unit: str, line_items: list[dict]) -> dict:
     amounts = [li.get("amount", 0) for li in line_items]
     subtotal, tax, total = _totals(amounts)
-    return {"document": "estimate", "company": COMPANY, "property": property,
+    result = {"document": "estimate", "company": COMPANY, "property": property,
+              "unit": unit, "line_items": line_items,
+              "subtotal": subtotal, "rate": SEATTLE_TAX_RATE, "tax": tax,
+              "total": total, "engine": TAX_ENGINE,
+              "status": "draft", "note": "Draft only. No tenant name included."}
+    # An estimate is a client-facing draft, so render the real document at draft
+    # time. Invoices stay numbers-only until the gated finalize step approves them.
+    pdf = _render_document("estimate", _mint_doc_number("EST", unit),
+                           property, unit, line_items, "estimates")
+    if pdf:
+        result["pdf"] = pdf
+        result["pdf_engine"] = PDF_ENGINE
+    return result
+
+
+def generate_invoice(property: str, unit: str, line_items: list[dict]) -> dict:
+    amounts = [li.get("amount", 0) for li in line_items]
+    subtotal, tax, total = _totals(amounts)
+    return {"document": "invoice", "company": COMPANY, "property": property,
             "unit": unit, "line_items": line_items,
             "subtotal": subtotal, "rate": SEATTLE_TAX_RATE, "tax": tax,
             "total": total, "engine": TAX_ENGINE,
             "status": "draft", "note": "Draft only. No tenant name included."}
-
-
-def generate_invoice(property: str, unit: str, line_items: list[dict]) -> dict:
-    est = generate_estimate(property, unit, line_items)
-    est["document"] = "invoice"
-    return est
 
 
 def finalize_invoice(property: str = "", unit: str = "",
@@ -194,20 +239,13 @@ def finalize_invoice(property: str = "", unit: str = "",
     tests still run end to end.
     """
     line_items = line_items or []
-    if PDF_ENGINE == "asantico-cli" and line_items:
-        items = [
-            _LineItem(description=li.get("description", "line"),
-                      quantity=_Decimal("1"), unit="flat",
-                      unit_price=_Decimal(str(li.get("amount", 0))))
-            for li in line_items
-        ]
-        doc = _Document(doc_type="invoice", doc_number=invoice_id,
-                        date=_date.today(),
-                        property=_Property(name=property or "Property"),
-                        line_items=items)
-        path = _render_pdf(doc, _Path("invoices"))
+    if invoice_id == "INV-0001":  # default: mint the dated Asantico number
+        invoice_id = _mint_doc_number("INV", unit)
+    path = _render_document("invoice", invoice_id, property, unit,
+                            line_items, "invoices")
+    if path:
         return {"invoice_id": invoice_id, "status": "finalized",
-                "pdf": str(path), "engine": PDF_ENGINE}
+                "pdf": path, "engine": PDF_ENGINE}
     return {"invoice_id": invoice_id, "status": "finalized",
             "pdf": f"invoices/{invoice_id}.pdf", "engine": PDF_ENGINE}
 

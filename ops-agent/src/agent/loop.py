@@ -100,8 +100,10 @@ class Agent:
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         if call.tool == "draft_client_message":
             convo.last_draft = result  # remember the reviewed draft for a later send
-        if call.tool == "generate_invoice":
-            convo.last_invoice = result  # remember the invoice for a later finalize
+        if call.tool in ("generate_invoice", "generate_estimate"):
+            # Remember the drafted document so a later gated finalize renders the
+            # exact line items the operator reviewed (estimate -> invoice flow).
+            convo.last_invoice = result
         reply = self._format(call.tool, result, approved=False)
         if call.notes:
             reply += "\nNote: " + " ".join(call.notes)
@@ -113,10 +115,13 @@ class Agent:
             srcs = ", ".join(sorted({h["source"] for h in result["sources"]}))
             return f"{result['answer']}\n(sources: {srcs})"
         if tool in ("generate_invoice", "generate_estimate"):
-            return (f"{result['document'].title()} drafted for {result['property']} "
-                    f"unit {result['unit']}: subtotal ${result['subtotal']}, "
-                    f"tax ${result['tax']} (10.55%), total ${result['total']}. "
-                    f"Status: {result['status']}. Reply to finalize or send.")
+            reply = (f"{result['document'].title()} drafted for {result['property']} "
+                     f"unit {result['unit']}: subtotal ${result['subtotal']}, "
+                     f"tax ${result['tax']} (10.55%), total ${result['total']}. "
+                     f"Status: {result['status']}. Reply to finalize or send.")
+            if result.get("pdf"):
+                reply += f"\nPDF written: {result['pdf']}"
+            return reply
         if tool == "triage_work_order":
             return (f"Triaged: {result['urgency']} / {result['trade']}. {result['note']}")
         if tool == "compute_tax":

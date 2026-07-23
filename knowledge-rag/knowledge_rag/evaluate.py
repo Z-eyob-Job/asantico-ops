@@ -152,7 +152,7 @@ def write_report(summary: dict, path: str = REPORT_FILE) -> None:
                      "wording estimated time). A learned embedding is the fix.")
         lines.append("")
         lines.append("Metadata mismatch across documents. As the corpus grows, "
-                     "added, several documents will discuss overlapping concepts "
+                     "several documents will discuss overlapping concepts "
                      "such as tax and billing, so file-level ground truth "
                      "will need document-type and section metadata to stay precise.")
         lines.append("")

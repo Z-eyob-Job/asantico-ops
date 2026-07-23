@@ -56,21 +56,58 @@ class TelegramChannel(Channel):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
 
-    @staticmethod
-    def _to_inbound(update: dict) -> Inbound | None:
+    def _to_inbound(self, update: dict) -> Inbound | None:
         """Map a Telegram update to an Inbound, or None for updates we ignore.
 
         conv_id is the chat_id (as a string), which is what makes approval state
-        per chat once it reaches the agent loop."""
+        per chat once it reaches the agent loop. Voice notes are downloaded and
+        transcribed locally with Whisper (src/voice.py) - the audio never goes
+        to a cloud speech API."""
         message = update.get("message") or update.get("edited_message")
         if not message:
             return None
-        text = message.get("text")
-        if not text:
-            return None  # ignore non-text updates (stickers, joins, photos, ...)
         chat_id = message["chat"]["id"]
         sender = str(message.get("from", {}).get("username") or chat_id)
-        return Inbound(conv_id=str(chat_id), text=text, sender=sender)
+        text = message.get("text")
+        if text:
+            return Inbound(conv_id=str(chat_id), text=text, sender=sender)
+        media = message.get("voice") or message.get("audio") or message.get("video_note")
+        if media:
+            text = self._transcribe_media(str(chat_id), media)
+            if text:
+                return Inbound(conv_id=str(chat_id), text=text, sender=sender)
+            return None
+        return None  # ignore other non-text updates (stickers, joins, photos, ...)
+
+    def _transcribe_media(self, chat_id: str, media: dict) -> str | None:
+        """Download a voice/audio message and transcribe it locally.
+
+        Sends the operator a "heard: ..." echo so they can see exactly what the
+        agent is about to act on before any reply arrives. Any failure replies
+        with a short hint and returns None (degrade, never crash)."""
+        import tempfile
+
+        try:
+            from src import voice
+
+            info = self._call("getFile", {"file_id": media["file_id"]}, timeout=30)
+            file_path = info["result"]["file_path"]
+            url = f"https://api.telegram.org/file/bot{self.token}/{file_path}"
+            suffix = "." + file_path.rsplit(".", 1)[-1] if "." in file_path else ".oga"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+                with urllib.request.urlopen(url, timeout=60) as resp:
+                    tmp.write(resp.read())
+                tmp.flush()
+                text = voice.transcribe(tmp.name)
+        except Exception as exc:  # noqa: BLE001 - degrade with a hint, never crash
+            logger.warning("Voice transcription failed: %s", exc)
+            self.send(chat_id, f"I could not transcribe that voice note. {exc}")
+            return None
+        if not text:
+            self.send(chat_id, "I could not hear any speech in that voice note.")
+            return None
+        self.send(chat_id, f"(heard: {text})")
+        return text
 
     # -- Channel interface -------------------------------------------------- #
     def listen(self) -> Iterator[Inbound]:
