@@ -42,3 +42,124 @@
 {"ts": "2026-06-14T23:53:41.701569+00:00", "trace_id": "2bad61d19009", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "send_client_message"}
 {"ts": "2026-06-14T23:53:41.702456+00:00", "trace_id": "abeaab41db50", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "compute_tax", "args": {"subtotal": 420}}
 {"ts": "2026-06-14T23:53:41.702542+00:00", "trace_id": "abeaab41db50", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "compute_tax"}
+{"ts": "2026-07-23T19:41:35.079942+00:00", "trace_id": "9c4b1cb994af", "conv_id": "cli-user", "event": "message_received", "message": "What is the sales tax rate and how should invoices be addressed?"}
+{"ts": "2026-07-23T19:41:35.083059+00:00", "trace_id": "9c4b1cb994af", "conv_id": "cli-user", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-07-23T19:41:35.091012+00:00", "trace_id": "9c4b1cb994af", "conv_id": "cli-user", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-07-23T19:41:35.091983+00:00", "trace_id": "d675a7716db6", "conv_id": "cli-user", "event": "message_received", "message": "VEER LOFTS unit 208 has a water leak under the sink"}
+{"ts": "2026-07-23T19:41:35.092639+00:00", "trace_id": "d675a7716db6", "conv_id": "cli-user", "event": "routed", "tool": "triage_work_order", "rationale": "Looks like a new work order to triage.", "risk": "read"}
+{"ts": "2026-07-23T19:41:35.092798+00:00", "trace_id": "d675a7716db6", "conv_id": "cli-user", "event": "tool_executed", "tool": "triage_work_order", "gated": false}
+{"ts": "2026-07-23T19:41:35.092945+00:00", "trace_id": "0d11cd6e6e60", "conv_id": "cli-user", "event": "message_received", "message": "create an estimate for VEER LOFTS unit 208 for $420"}
+{"ts": "2026-07-23T19:41:35.093484+00:00", "trace_id": "0d11cd6e6e60", "conv_id": "cli-user", "event": "routed", "tool": "generate_estimate", "rationale": "User asked for an estimate.", "risk": "draft"}
+{"ts": "2026-07-23T19:41:35.094117+00:00", "trace_id": "0d11cd6e6e60", "conv_id": "cli-user", "event": "tool_executed", "tool": "generate_estimate", "gated": false}
+{"ts": "2026-07-23T19:41:35.094408+00:00", "trace_id": "b9a6f40c8cbf", "conv_id": "cli-user", "event": "message_received", "message": "draft a message to Saniya"}
+{"ts": "2026-07-23T19:41:35.094577+00:00", "trace_id": "b9a6f40c8cbf", "conv_id": "cli-user", "event": "routed", "tool": "draft_client_message", "rationale": "User asked to draft a client message.", "risk": "draft"}
+{"ts": "2026-07-23T19:41:35.094691+00:00", "trace_id": "b9a6f40c8cbf", "conv_id": "cli-user", "event": "tool_executed", "tool": "draft_client_message", "gated": false}
+{"ts": "2026-07-23T19:41:35.094824+00:00", "trace_id": "a7cbc5b07de3", "conv_id": "cli-user", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T19:41:35.094934+00:00", "trace_id": "a7cbc5b07de3", "conv_id": "cli-user", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T19:41:35.095027+00:00", "trace_id": "a7cbc5b07de3", "conv_id": "cli-user", "event": "send_uses_reviewed_draft", "tool": "send_client_message"}
+{"ts": "2026-07-23T19:41:35.095112+00:00", "trace_id": "a7cbc5b07de3", "conv_id": "cli-user", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Hi Saniya, the work has been completed and the documentation is ready for your review. Please let me know if you need anything else. Thank you, Asantico."}}
+{"ts": "2026-07-23T19:41:35.319535+00:00", "trace_id": "ba86982459ef", "conv_id": "cli-user", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T19:41:35.320259+00:00", "trace_id": "ba86982459ef", "conv_id": "cli-user", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Hi Saniya, the work has been completed and the documentation is ready for your review. Please let me know if you need anything else. Thank you, Asantico."}}
+{"ts": "2026-07-23T19:41:35.320655+00:00", "trace_id": "ba86982459ef", "conv_id": "cli-user", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-07-23T21:54:35.658953+00:00", "trace_id": "3f724ff1a17c", "conv_id": "cli-user", "event": "message_received", "message": "what is the sales tax"}
+{"ts": "2026-07-23T21:54:35.662181+00:00", "trace_id": "3f724ff1a17c", "conv_id": "cli-user", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-07-23T21:54:35.669559+00:00", "trace_id": "3f724ff1a17c", "conv_id": "cli-user", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-07-23T21:55:00.189266+00:00", "trace_id": "20c86e41dc1d", "conv_id": "cli-user", "event": "message_received", "message": "how  should invoice be addressed"}
+{"ts": "2026-07-23T21:55:00.191488+00:00", "trace_id": "20c86e41dc1d", "conv_id": "cli-user", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-07-23T21:55:00.198847+00:00", "trace_id": "20c86e41dc1d", "conv_id": "cli-user", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-07-23T21:55:30.662291+00:00", "trace_id": "6be96820ba91", "conv_id": "cli-user", "event": "message_received", "message": "create an estimate for veer lofts unit 208 for $429"}
+{"ts": "2026-07-23T21:55:30.665814+00:00", "trace_id": "6be96820ba91", "conv_id": "cli-user", "event": "routed", "tool": "generate_estimate", "rationale": "User asked for an estimate.", "risk": "draft"}
+{"ts": "2026-07-23T21:55:30.668213+00:00", "trace_id": "6be96820ba91", "conv_id": "cli-user", "event": "tool_executed", "tool": "generate_estimate", "gated": false}
+{"ts": "2026-07-23T21:56:06.561372+00:00", "trace_id": "6488c41f0084", "conv_id": "cli-user", "event": "message_received", "message": "draft a message to saniya and send an update to saniya"}
+{"ts": "2026-07-23T21:56:06.563673+00:00", "trace_id": "6488c41f0084", "conv_id": "cli-user", "event": "routed", "tool": "draft_client_message", "rationale": "User asked to draft a client message.", "risk": "draft"}
+{"ts": "2026-07-23T21:56:06.564121+00:00", "trace_id": "6488c41f0084", "conv_id": "cli-user", "event": "tool_executed", "tool": "draft_client_message", "gated": false}
+{"ts": "2026-07-23T21:56:15.209984+00:00", "trace_id": "9208c1b2b070", "conv_id": "cli-user", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T21:56:15.212370+00:00", "trace_id": "9208c1b2b070", "conv_id": "cli-user", "event": "control_word_no_pending", "word": "approve"}
+{"ts": "2026-07-23T22:37:19.075760+00:00", "trace_id": "1089881716a5", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T22:37:19.076230+00:00", "trace_id": "1089881716a5", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.076292+00:00", "trace_id": "1089881716a5", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.076695+00:00", "trace_id": "617ebce43a49", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T22:37:19.076760+00:00", "trace_id": "617ebce43a49", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.076804+00:00", "trace_id": "617ebce43a49", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.076850+00:00", "trace_id": "ea0b37903375", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.076893+00:00", "trace_id": "ea0b37903375", "conv_id": "c1", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.076951+00:00", "trace_id": "ea0b37903375", "conv_id": "c1", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-07-23T22:37:19.077230+00:00", "trace_id": "2a5b22e00f4d", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T22:37:19.077283+00:00", "trace_id": "2a5b22e00f4d", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.077320+00:00", "trace_id": "2a5b22e00f4d", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.077360+00:00", "trace_id": "c5eaecd6b66c", "conv_id": "c1", "event": "message_received", "message": "cancel"}
+{"ts": "2026-07-23T22:37:19.077393+00:00", "trace_id": "c5eaecd6b66c", "conv_id": "c1", "event": "approval_denied", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.077649+00:00", "trace_id": "4c619c14214c", "conv_id": "c1", "event": "message_received", "message": "What is the sales tax rate?"}
+{"ts": "2026-07-23T22:37:19.077702+00:00", "trace_id": "4c619c14214c", "conv_id": "c1", "event": "routed", "tool": "knowledge_base", "rationale": "Question phrasing detected; answering from the knowledge base.", "risk": "read"}
+{"ts": "2026-07-23T22:37:19.080364+00:00", "trace_id": "4c619c14214c", "conv_id": "c1", "event": "tool_executed", "tool": "knowledge_base", "gated": false}
+{"ts": "2026-07-23T22:37:19.080725+00:00", "trace_id": "271bbc2c92d3", "conv_id": "c1", "event": "message_received", "message": "there is a water leak under the sink"}
+{"ts": "2026-07-23T22:37:19.080800+00:00", "trace_id": "271bbc2c92d3", "conv_id": "c1", "event": "routed", "tool": "triage_work_order", "rationale": "Looks like a new work order to triage.", "risk": "read"}
+{"ts": "2026-07-23T22:37:19.080851+00:00", "trace_id": "271bbc2c92d3", "conv_id": "c1", "event": "tool_executed", "tool": "triage_work_order", "gated": false}
+{"ts": "2026-07-23T22:37:19.082102+00:00", "trace_id": "a927f809a3e6", "conv_id": "c1", "event": "message_received", "message": "draft a message to Saniya"}
+{"ts": "2026-07-23T22:37:19.082158+00:00", "trace_id": "a927f809a3e6", "conv_id": "c1", "event": "routed", "tool": "draft_client_message", "rationale": "User asked to draft a client message.", "risk": "draft"}
+{"ts": "2026-07-23T22:37:19.082197+00:00", "trace_id": "a927f809a3e6", "conv_id": "c1", "event": "tool_executed", "tool": "draft_client_message", "gated": false}
+{"ts": "2026-07-23T22:37:19.082238+00:00", "trace_id": "1abcf4c56ec2", "conv_id": "c1", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T22:37:19.082278+00:00", "trace_id": "1abcf4c56ec2", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.082312+00:00", "trace_id": "1abcf4c56ec2", "conv_id": "c1", "event": "send_uses_reviewed_draft", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.082344+00:00", "trace_id": "1abcf4c56ec2", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Hi Saniya, the work has been completed and the documentation is ready for your review. Please let me know if you need anything else. Thank you, Asantico."}}
+{"ts": "2026-07-23T22:37:19.082582+00:00", "trace_id": "a24f086a4b90", "conv_id": "c1", "event": "message_received", "message": "create an estimate for VEER LOFTS unit 208"}
+{"ts": "2026-07-23T22:37:19.082855+00:00", "trace_id": "a24f086a4b90", "conv_id": "c1", "event": "routed", "tool": "generate_estimate", "rationale": "User asked for an estimate.", "risk": "draft"}
+{"ts": "2026-07-23T22:37:19.082901+00:00", "trace_id": "a24f086a4b90", "conv_id": "c1", "event": "assumption", "tool": "generate_estimate", "note": "no price was found in the message, so a 150.00 service-call amount was assumed; confirm before finalizing."}
+{"ts": "2026-07-23T22:37:19.082970+00:00", "trace_id": "a24f086a4b90", "conv_id": "c1", "event": "tool_executed", "tool": "generate_estimate", "gated": false}
+{"ts": "2026-07-23T22:37:19.083220+00:00", "trace_id": "801c5935d313", "conv_id": "c1", "event": "message_received", "message": "create an estimate for VEER LOFTS unit 208 for $420"}
+{"ts": "2026-07-23T22:37:19.083281+00:00", "trace_id": "801c5935d313", "conv_id": "c1", "event": "routed", "tool": "generate_estimate", "rationale": "User asked for an estimate.", "risk": "draft"}
+{"ts": "2026-07-23T22:37:19.083325+00:00", "trace_id": "801c5935d313", "conv_id": "c1", "event": "tool_executed", "tool": "generate_estimate", "gated": false}
+{"ts": "2026-07-23T22:37:19.084492+00:00", "trace_id": "ad9e411167be", "conv_id": "c1", "event": "message_received", "message": "create an invoice for VEER LOFTS unit 208 for $420"}
+{"ts": "2026-07-23T22:37:19.084553+00:00", "trace_id": "ad9e411167be", "conv_id": "c1", "event": "routed", "tool": "generate_invoice", "rationale": "User asked for an invoice.", "risk": "draft"}
+{"ts": "2026-07-23T22:37:19.084596+00:00", "trace_id": "ad9e411167be", "conv_id": "c1", "event": "tool_executed", "tool": "generate_invoice", "gated": false}
+{"ts": "2026-07-23T22:37:19.084636+00:00", "trace_id": "c1371d3af639", "conv_id": "c1", "event": "message_received", "message": "finalize the invoice"}
+{"ts": "2026-07-23T22:37:19.084670+00:00", "trace_id": "c1371d3af639", "conv_id": "c1", "event": "routed", "tool": "finalize_invoice", "rationale": "User asked to finalize an invoice (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.084702+00:00", "trace_id": "c1371d3af639", "conv_id": "c1", "event": "finalize_uses_drafted_invoice", "tool": "finalize_invoice"}
+{"ts": "2026-07-23T22:37:19.084736+00:00", "trace_id": "c1371d3af639", "conv_id": "c1", "event": "approval_requested", "tool": "finalize_invoice", "args": {"property": "Veer Lofts", "unit": "208", "line_items": [{"description": "Service call", "amount": 420.0}]}}
+{"ts": "2026-07-23T22:37:19.084777+00:00", "trace_id": "21a598c267f5", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.084809+00:00", "trace_id": "21a598c267f5", "conv_id": "c1", "event": "approval_granted", "tool": "finalize_invoice", "args": {"property": "Veer Lofts", "unit": "208", "line_items": [{"description": "Service call", "amount": 420.0}]}}
+{"ts": "2026-07-23T22:37:19.087402+00:00", "trace_id": "21a598c267f5", "conv_id": "c1", "event": "tool_executed", "tool": "finalize_invoice", "gated": true}
+{"ts": "2026-07-23T22:37:19.090601+00:00", "trace_id": "594b162e2f75", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.090654+00:00", "trace_id": "594b162e2f75", "conv_id": "c1", "event": "control_word_no_pending", "word": "approve"}
+{"ts": "2026-07-23T22:37:19.090696+00:00", "trace_id": "e29db7e332c2", "conv_id": "c1", "event": "message_received", "message": "yes"}
+{"ts": "2026-07-23T22:37:19.090730+00:00", "trace_id": "e29db7e332c2", "conv_id": "c1", "event": "control_word_no_pending", "word": "yes"}
+{"ts": "2026-07-23T22:37:19.090765+00:00", "trace_id": "8a849e065ce8", "conv_id": "c1", "event": "message_received", "message": "confirm"}
+{"ts": "2026-07-23T22:37:19.090797+00:00", "trace_id": "8a849e065ce8", "conv_id": "c1", "event": "control_word_no_pending", "word": "confirm"}
+{"ts": "2026-07-23T22:37:19.090830+00:00", "trace_id": "3f143585c3c5", "conv_id": "c1", "event": "message_received", "message": "ok"}
+{"ts": "2026-07-23T22:37:19.090861+00:00", "trace_id": "3f143585c3c5", "conv_id": "c1", "event": "control_word_no_pending", "word": "ok"}
+{"ts": "2026-07-23T22:37:19.090895+00:00", "trace_id": "3f9baf1935f2", "conv_id": "c1", "event": "message_received", "message": "cancel"}
+{"ts": "2026-07-23T22:37:19.090928+00:00", "trace_id": "3f9baf1935f2", "conv_id": "c1", "event": "control_word_no_pending", "word": "cancel"}
+{"ts": "2026-07-23T22:37:19.090982+00:00", "trace_id": "16ae8b854697", "conv_id": "c1", "event": "message_received", "message": "no"}
+{"ts": "2026-07-23T22:37:19.091018+00:00", "trace_id": "16ae8b854697", "conv_id": "c1", "event": "control_word_no_pending", "word": "no"}
+{"ts": "2026-07-23T22:37:19.091054+00:00", "trace_id": "5f203fd054d0", "conv_id": "c1", "event": "message_received", "message": "stop"}
+{"ts": "2026-07-23T22:37:19.091091+00:00", "trace_id": "5f203fd054d0", "conv_id": "c1", "event": "control_word_no_pending", "word": "stop"}
+{"ts": "2026-07-23T22:37:19.091364+00:00", "trace_id": "24509f63b4d3", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.091408+00:00", "trace_id": "24509f63b4d3", "conv_id": "c1", "event": "control_word_no_pending", "word": "approve"}
+{"ts": "2026-07-23T22:37:19.091453+00:00", "trace_id": "4aa4ce1b7709", "conv_id": "c1", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.091485+00:00", "trace_id": "4aa4ce1b7709", "conv_id": "c1", "event": "control_word_no_pending", "word": "approve"}
+{"ts": "2026-07-23T22:37:19.091756+00:00", "trace_id": "afb9ba85f6a1", "conv_id": "c1", "event": "message_received", "message": "send the update to Saniya"}
+{"ts": "2026-07-23T22:37:19.091805+00:00", "trace_id": "afb9ba85f6a1", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "LLM router selected send_client_message.", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.091843+00:00", "trace_id": "afb9ba85f6a1", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Done."}}
+{"ts": "2026-07-23T22:37:19.091884+00:00", "trace_id": "1eb5b6f8e356", "conv_id": "c1", "event": "message_received", "message": "cancel"}
+{"ts": "2026-07-23T22:37:19.091917+00:00", "trace_id": "1eb5b6f8e356", "conv_id": "c1", "event": "approval_denied", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.099347+00:00", "trace_id": "8200a4aa8f9e", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "x", "body": "y"}}
+{"ts": "2026-07-23T22:37:19.099405+00:00", "trace_id": "8200a4aa8f9e", "conv_id": "mcp", "event": "mcp_gated_blocked", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.099794+00:00", "trace_id": "f1bde9c10243", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "x", "body": "y", "approve": true}}
+{"ts": "2026-07-23T22:37:19.099844+00:00", "trace_id": "f1bde9c10243", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.100212+00:00", "trace_id": "1dc0b71977cd", "conv_id": "mcp", "event": "mcp_tool_call", "tool": "compute_tax", "args": {"subtotal": 420}}
+{"ts": "2026-07-23T22:37:19.100268+00:00", "trace_id": "1dc0b71977cd", "conv_id": "mcp", "event": "mcp_tool_result", "tool": "compute_tax"}
+{"ts": "2026-07-23T22:37:19.101739+00:00", "trace_id": "6f1679915ce1", "conv_id": "c1", "event": "message_received", "message": "thanks, that's all"}
+{"ts": "2026-07-23T22:37:19.101796+00:00", "trace_id": "6f1679915ce1", "conv_id": "c1", "event": "routed", "tool": "send_client_message", "rationale": "LLM router selected send_client_message.", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.101836+00:00", "trace_id": "6f1679915ce1", "conv_id": "c1", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Done."}}
+{"ts": "2026-07-23T22:37:19.101879+00:00", "trace_id": "aac8c1847ebc", "conv_id": "c1", "event": "message_received", "message": "cancel"}
+{"ts": "2026-07-23T22:37:19.101912+00:00", "trace_id": "aac8c1847ebc", "conv_id": "c1", "event": "approval_denied", "tool": "send_client_message"}
+{"ts": "2026-07-23T22:37:19.103600+00:00", "trace_id": "92d5709b81a9", "conv_id": "1001", "event": "message_received", "message": "send an update to Saniya"}
+{"ts": "2026-07-23T22:37:19.103656+00:00", "trace_id": "92d5709b81a9", "conv_id": "1001", "event": "routed", "tool": "send_client_message", "rationale": "User asked to send a client message (gated).", "risk": "gated"}
+{"ts": "2026-07-23T22:37:19.103712+00:00", "trace_id": "92d5709b81a9", "conv_id": "1001", "event": "approval_requested", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.103757+00:00", "trace_id": "6324ee515ef0", "conv_id": "2002", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.103795+00:00", "trace_id": "6324ee515ef0", "conv_id": "2002", "event": "control_word_no_pending", "word": "approve"}
+{"ts": "2026-07-23T22:37:19.103834+00:00", "trace_id": "70871992800e", "conv_id": "1001", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.103868+00:00", "trace_id": "70871992800e", "conv_id": "1001", "event": "approval_granted", "tool": "send_client_message", "args": {"to": "Saniya", "subject": "Job update", "body": "Work completed; documentation ready for review."}}
+{"ts": "2026-07-23T22:37:19.103906+00:00", "trace_id": "70871992800e", "conv_id": "1001", "event": "tool_executed", "tool": "send_client_message", "gated": true}
+{"ts": "2026-07-23T22:37:19.103942+00:00", "trace_id": "9b986b0c24cd", "conv_id": "1001", "event": "message_received", "message": "approve"}
+{"ts": "2026-07-23T22:37:19.103972+00:00", "trace_id": "9b986b0c24cd", "conv_id": "1001", "event": "control_word_no_pending", "word": "approve"}
