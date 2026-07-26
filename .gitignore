@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 knowledge-rag/data/index/
+ops-agent/estimates/
+ops-agent/invoices/
+ops-agent/workorders/
+ops-agent/logs/agent.jsonl
