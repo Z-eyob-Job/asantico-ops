@@ -35,7 +35,7 @@ def test_mcp_read_tool_runs_freely():
 def test_log_event_writes_jsonl(tmp_path, monkeypatch):
     logfile = tmp_path / "t.jsonl"
     monkeypatch.setattr(observability, "LOG_FILE", str(logfile))
-    monkeypatch.setattr(observability, "LOG_TO_STDERR", False)
+    monkeypatch.setenv("AGENT_LOG_STDERR", "0")
     rec = observability.log_event("unit_test", "c1", "trace1", tool="x")
     assert rec["event"] == "unit_test"
     written = json.loads(logfile.read_text().strip())

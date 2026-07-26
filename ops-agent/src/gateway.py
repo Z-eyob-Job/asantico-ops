@@ -34,6 +34,12 @@ def make_channel(name: str):
 
 
 def run(channel_name: str = "cli") -> None:
+    import os
+
+    # The CLI is what the operator looks at: keep it clean by default. The
+    # JSONL audit log always records everything; VERBOSE=1 echoes it here too.
+    if channel_name == "cli" and os.getenv("VERBOSE", "0") != "1":
+        os.environ.setdefault("AGENT_LOG_STDERR", "0")
     channel = make_channel(channel_name)
     agent = Agent()
     print(f"[gateway] listening on channel: {channel.name}")

@@ -19,7 +19,7 @@ import uuid
 from datetime import UTC, datetime
 
 LOG_FILE = os.getenv("AGENT_LOG_FILE", "logs/agent.jsonl")
-LOG_TO_STDERR = os.getenv("AGENT_LOG_STDERR", "1") == "1"
+
 
 
 def _now() -> str:
@@ -45,7 +45,7 @@ def log_event(event: str, conv_id: str, trace_id: str, **fields) -> dict:
     with open(LOG_FILE, "a", encoding="utf-8") as fh:
         fh.write(line + "\n")
 
-    if LOG_TO_STDERR:
+    if os.getenv("AGENT_LOG_STDERR", "1") == "1":
         # stderr so it never pollutes a channel's stdout reply stream.
         print(line, file=sys.stderr)
 

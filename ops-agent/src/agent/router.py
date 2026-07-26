@@ -63,7 +63,13 @@ def route(message: str) -> ToolCall:
 
 
 _LOCAL_ROUTER_SYSTEM = """You route one operator message for a Seattle \
-property-maintenance business to exactly one tool. Reply with ONLY a JSON \
+property-maintenance business (Asantico) to exactly one tool. The operator may \
+write in ANY language and any style - casual, terse, misspelled, voice-transcribed; \
+understand the intent and route it. The workflow you are part of: a work order \
+(client checklist) is loaded -> an estimate is drafted as a real PDF -> the \
+operator edits lines in plain words -> the invoice is finalized only after \
+explicit human approval -> a client message is drafted and sent only after \
+approval. Prefer the tool that advances this flow. Reply with ONLY a JSON \
 object: {"tool": <name>, "args": {...}, "rationale": <short string>}.
 
 Tools and their args:

@@ -10,6 +10,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import os
+import subprocess
+import sys
+
 from src import policy
 from src.agent.router import ToolCall, route
 from src.observability import log_event, new_trace_id
@@ -56,6 +60,7 @@ class Agent:
                     return (f"I hit a problem running {call.tool}: {exc}. "
                             "Nothing was sent or finalized.")
                 log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=True)
+                self._show_document(result)
                 return self._format(call.tool, result, approved=True)
             if text in CANCEL_WORDS:
                 tool = convo.pending.tool
@@ -190,10 +195,25 @@ class Agent:
             # Remember the drafted document so a later gated finalize renders the
             # exact line items the operator reviewed (estimate -> invoice flow).
             convo.last_invoice = result
+        self._show_document(result)
         reply = self._format(call.tool, result, approved=False)
         if call.notes:
             reply += "\nNote: " + " ".join(call.notes)
         return reply
+
+    @staticmethod
+    def _show_document(result) -> None:
+        """Open a freshly written PDF in the OS viewer so the operator sees the
+        actual document, not just a path. macOS only, on by default; set
+        AUTO_OPEN_DOCS=0 to disable (e.g. on a server or in Telegram mode)."""
+        pdf = isinstance(result, dict) and result.get("pdf")
+        if (pdf and sys.platform == "darwin"
+                and os.getenv("AUTO_OPEN_DOCS", "1") == "1"
+                and os.path.exists(pdf)):
+            try:
+                subprocess.Popen(["open", pdf])
+            except OSError:
+                pass  # viewing is a convenience, never an error
 
     @staticmethod
     def _format(tool: str, result: dict, approved: bool) -> str:
