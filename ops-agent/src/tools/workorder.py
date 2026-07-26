@@ -124,8 +124,34 @@ def parse_work_order(text: str, source_name: str = "") -> dict:
             wo = m.group(1)
             break
 
+    # Unknown-format fallback: a checklist export yields a modest task list,
+    # but an unrecognized layout (a different vendor's work order) explodes
+    # into dozens of junk lines. In that case keep only action-looking lines
+    # and mine "$xx" amounts from anywhere in the text as priced candidates.
+    fmt_unrecognized = False
+    if len(tasks) > 25:
+        fmt_unrecognized = True
+        _ACTION = re.compile(
+            r"\b(repair|replace|install|clean|fix|paint|patch|remove|adjust|"
+            r"re-?secure|service|inspect|check|caulk|seal|drywall|turn|unclog|"
+            r"tighten|mount|hang|haul|pressure ?wash)\b", re.I)
+        tasks = [t for t in tasks
+                 if len(t["description"]) < 90 and _ACTION.search(t["description"])][:25]
+        # Mine inline dollar amounts: "Replace deadbolt ... $45.00"
+        for ln in lines:
+            pm = re.search(r"^(.{4,70}?)[\s.:-]*\$\s*([0-9]+(?:\.[0-9]{2})?)\s*$", ln)
+            if pm and _ACTION.search(pm.group(1)):
+                desc = pm.group(1).strip()[:80]
+                if not any(t["description"] == desc for t in tasks):
+                    tasks.append({"description": desc, "price": float(pm.group(2))})
+                else:
+                    for t in tasks:
+                        if t["description"] == desc and t["price"] is None:
+                            t["price"] = float(pm.group(2))
+
     priced = [t for t in tasks if t["price"] is not None]
     return {
+        "format_unrecognized": fmt_unrecognized,
         "ok": bool(tasks or prop),
         "source": source_name,
         "work_order": wo,

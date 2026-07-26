@@ -35,12 +35,14 @@ class ToolCall:
     notes: list = field(default_factory=list)  # assumptions worth surfacing/logging
 
 
-def route(message: str) -> ToolCall:
+def route(message: str, context: str = "") -> ToolCall:
     """Route a message to a tool using the configured backend.
 
     ROUTER_BACKEND=llm uses the Anthropic function-calling router; anything else
     (default) uses the keyword router. A requested LLM router that cannot run
-    degrades to the keyword router rather than failing.
+    degrades to the keyword router rather than failing. context (current job,
+    draft, pending approval) helps the model routers resolve pronouns like
+    "finalize it"; the keyword router ignores it.
     """
     backend = os.getenv("ROUTER_BACKEND", "keyword").lower()
     if backend == "llm":
@@ -53,7 +55,7 @@ def route(message: str) -> ToolCall:
             )
     if backend in ("local", "ollama"):
         try:
-            return local_route(message)
+            return local_route(message, context)
         except Exception as exc:  # noqa: BLE001 - any failure must degrade, not crash
             logger.warning(
                 "ROUTER_BACKEND=local unavailable (%s); falling back to keyword router.",
@@ -90,7 +92,7 @@ yourself to remove an item - always use the remove edit.
 - draft_client_message {"manager": str, "subject": str}
 - send_client_message {"to": str, "subject": str, "body": str}: GATED.
 - finalize_invoice {}: GATED.
-- query_jobs {"property": str}
+- query_jobs {"property": str, "days": number}: job history and billing totals from the ledger ("how much did I bill this month")
 
 Rules: pick the single best tool. "tool" MUST be one of the names above, \
 never null. Omit args you cannot infer (use "" or []). Never invent prices. \
@@ -107,7 +109,7 @@ Examples:
 "new problem report"}"""
 
 
-def local_route(message: str) -> ToolCall:
+def local_route(message: str, context: str = "") -> ToolCall:
     """Route with a local Ollama model (no cloud, no key). Raises on any
     problem so route() falls back to the keyword router."""
     from src import local_llm
@@ -115,6 +117,8 @@ def local_route(message: str) -> ToolCall:
 
     if not local_llm.available():
         raise RuntimeError("Ollama is not running on localhost")
+    if context:
+        message = f"(current state: {context})\n{message}"
     tool, args, data = None, {}, {}
     for attempt in (1, 2):  # one retry: small local models misfire occasionally
         raw = local_llm.chat(_LOCAL_ROUTER_SYSTEM, message, json_mode=True)
@@ -216,6 +220,12 @@ def keyword_route(message: str) -> ToolCall:
         return ToolCall("fetch_email_work_order", {"query": needle},
                         "Operator asked to pull a work order from email.")
 
+    # Money questions are answered from the ledger, not the knowledge base.
+    if any(w in m for w in ("how much", "revenue", "billed", "earned")) \
+            and any(w in m for w in ("bill", "revenue", "earn", "made", "invoice")):
+        days = 7 if "week" in m else 30 if "month" in m else 365 if "year" in m else None
+        return ToolCall("query_jobs", {"days": days}, "Billing summary from the ledger.")
+
     # Questions go to the knowledge base, even if they mention "invoice"/"tax".
     if m.endswith("?") or re.match(r"(what|how|why|when|who|where|which|is|are|does|can)\b", m):
         if not any(w in m for w in ("create", "make", "generate", "draft", "send")):
@@ -273,9 +283,10 @@ def keyword_route(message: str) -> ToolCall:
                         {"manager": mgr, "subject": "Job update"},
                         "User asked to draft a client message.")
 
-    if any(w in m for w in ("job", "status", "completed", "history")):
+    if any(w in m for w in ("job", "completed", "history")):
         prop, _ = _extract_property_unit(m)
-        return ToolCall("query_jobs", {"property": prop}, "Job lookup.")
+        args = {} if prop == "Unknown Property" else {"property": prop}
+        return ToolCall("query_jobs", args, "Job lookup from the ledger.")
 
     # Default: treat as a knowledge-base question.
     return ToolCall("knowledge_base", {"query": message},

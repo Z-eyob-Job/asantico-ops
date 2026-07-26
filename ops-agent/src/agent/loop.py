@@ -32,6 +32,8 @@ class Conversation:
     last_draft: dict | None = None  # most recent drafted client message, by conv
     last_invoice: dict | None = None  # most recent drafted invoice, for finalize
     active_job: dict | None = None  # parsed work order driving this conversation
+    prev_invoice: dict | None = None  # previous draft, for 'undo'
+    loaded: bool = False  # persisted state pulled from disk yet?
 
 
 class Agent:
@@ -39,7 +41,11 @@ class Agent:
         self._convos: dict[str, Conversation] = {}
 
     def _convo(self, conv_id: str) -> Conversation:
-        return self._convos.setdefault(conv_id, Conversation())
+        convo = self._convos.setdefault(conv_id, Conversation())
+        if not convo.loaded:
+            self._load_state(conv_id, convo)
+            convo.loaded = True
+        return convo
 
     def handle(self, conv_id: str, message: str) -> str:
         convo = self._convo(conv_id)
@@ -60,6 +66,8 @@ class Agent:
                     return (f"I hit a problem running {call.tool}: {exc}. "
                             "Nothing was sent or finalized.")
                 log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=True)
+                self._record_outcome(call.tool, call.args, result, convo)
+                self._save_state(conv_id, convo)
                 self._show_document(result)
                 return self._format(call.tool, result, approved=True)
             if text in CANCEL_WORDS:
@@ -87,8 +95,22 @@ class Agent:
             return ("There is nothing waiting to approve or cancel. "
                     "Send a request first, then I can act on it.")
 
-        # Fresh message: route to a tool.
-        call = route(message)
+        # Operator meta-commands: status and undo, no tool call needed.
+        if text in ("status", "where are we", "what's loaded", "whats loaded"):
+            return self._status(convo)
+        if text in ("undo", "undo that", "go back"):
+            if convo.prev_invoice is not None:
+                convo.last_invoice, convo.prev_invoice = convo.prev_invoice, None
+                self._save_state(conv_id, convo)
+                d = convo.last_invoice
+                return (f"Reverted to the previous draft: {d.get('document','draft')} "
+                        f"for {d.get('property','?')} #{d.get('unit','?')}, "
+                        f"subtotal ${d.get('subtotal',0)}, total ${d.get('total',0)}.")
+            return "Nothing to undo yet."
+
+        # Fresh message: route to a tool, with current state as context so the
+        # local model resolves pronouns ("finalize it") and stays on-workflow.
+        call = route(message, context=self._context(convo))
         convo.history.append(message)
         log_event("routed", conv_id, trace_id, tool=call.tool,
                   rationale=call.rationale, risk=policy.risk_of(call.tool).value)
@@ -99,11 +121,29 @@ class Agent:
             # Safety: the operator must approve the exact text that will be sent.
             # If a client message was drafted earlier in this conversation, carry
             # that reviewed draft into the gated send instead of a generic body.
-            if call.tool == "send_client_message" and convo.last_draft is not None:
-                call.args["to"] = convo.last_draft.get("to", call.args.get("to"))
-                call.args["subject"] = convo.last_draft.get("subject", call.args.get("subject"))
-                call.args["body"] = convo.last_draft.get("body", call.args.get("body"))
-                log_event("send_uses_reviewed_draft", conv_id, trace_id, tool=call.tool)
+            if call.tool == "send_client_message":
+                if convo.last_draft is not None:
+                    call.args["to"] = convo.last_draft.get("to", call.args.get("to"))
+                    call.args["subject"] = convo.last_draft.get("subject", call.args.get("subject"))
+                    call.args["body"] = convo.last_draft.get("body", call.args.get("body"))
+                    log_event("send_uses_reviewed_draft", conv_id, trace_id, tool=call.tool)
+                # Resolve a real address: explicit @ in the message beats the
+                # work-order sender beats the configured default client.
+                to = str(call.args.get("to", ""))
+                if "@" in to:
+                    call.args["to_email"] = to
+                elif convo.active_job and "@" in str(convo.active_job.get("email_from", "")):
+                    import re as _re
+                    m_addr = _re.search(r"[\w.+-]+@[\w.-]+", convo.active_job["email_from"])
+                    if m_addr:
+                        call.args["to_email"] = m_addr.group(0)
+                elif os.getenv("DEFAULT_CLIENT_EMAIL"):
+                    call.args["to_email"] = os.environ["DEFAULT_CLIENT_EMAIL"]
+                # Attach the current document when the operator says so.
+                low = message.lower()
+                if any(w in low for w in ("invoice", "estimate", "pdf", "document", "attach")) \
+                        and convo.last_invoice and convo.last_invoice.get("pdf"):
+                    call.args["attachment"] = convo.last_invoice["pdf"]
             # Finalize the exact invoice the operator drafted, so the approved
             # PDF matches what they reviewed.
             if call.tool == "finalize_invoice" and convo.last_invoice is not None:
@@ -240,17 +280,108 @@ class Agent:
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         if call.tool in ("load_work_order", "fetch_email_work_order") and result.get("ok"):
             convo.active_job = result  # this job now drives documents and drafts
+            self._record_outcome(call.tool, call.args, result, convo)
         if call.tool == "draft_client_message":
             convo.last_draft = result  # remember the reviewed draft for a later send
         if call.tool in ("generate_invoice", "generate_estimate"):
             # Remember the drafted document so a later gated finalize renders the
             # exact line items the operator reviewed (estimate -> invoice flow).
+            # The previous draft is kept for 'undo'.
+            convo.prev_invoice = convo.last_invoice
             convo.last_invoice = result
+        self._save_state(conv_id, convo)
         self._show_document(result)
         reply = self._format(call.tool, result, approved=False)
         if call.notes:
             reply += "\nNote: " + " ".join(call.notes)
         return reply
+
+    def _status(self, convo: Conversation) -> str:
+        parts = []
+        if convo.active_job:
+            j = convo.active_job
+            parts.append(f"Job: {j.get('property','?')} #{j.get('unit','?')}"
+                         + (f" (WO {j['work_order']})" if j.get("work_order") else "")
+                         + f", {j.get('task_count',0)} tasks / {j.get('priced_count',0)} priced")
+        if convo.last_invoice:
+            d = convo.last_invoice
+            parts.append(f"Draft: {d.get('document','?')} subtotal ${d.get('subtotal',0)}"
+                         f" total ${d.get('total',0)}")
+        if convo.last_draft:
+            parts.append(f"Message draft to {convo.last_draft.get('to','?')} (not sent)")
+        if convo.pending:
+            parts.append(f"WAITING FOR APPROVAL: {convo.pending.tool}")
+        return " | ".join(parts) if parts else ("Nothing in progress. Load a work "
+                                                "order or ask for an estimate.")
+
+    @staticmethod
+    def _context(convo: Conversation) -> str:
+        bits = []
+        if convo.active_job:
+            j = convo.active_job
+            bits.append(f"active job {j.get('property','')} #{j.get('unit','')}")
+        if convo.last_invoice:
+            d = convo.last_invoice
+            bits.append(f"current {d.get('document','draft')} total ${d.get('total',0)}")
+        if convo.pending:
+            bits.append(f"pending approval: {convo.pending.tool}")
+        return "; ".join(bits)
+
+    @staticmethod
+    def _record_outcome(tool: str, args: dict, result: dict, convo) -> None:
+        """Write operational outcomes to the job ledger (never raises)."""
+        try:
+            from src import ledger
+
+            if tool in ("load_work_order", "fetch_email_work_order"):
+                ledger.record("work_order_loaded", property=result.get("property"),
+                              unit=result.get("unit"), work_order=result.get("work_order"),
+                              tasks=result.get("task_count"), source=result.get("source"))
+            elif tool == "finalize_invoice":
+                job = convo.active_job or {}
+                items = args.get("line_items", []) or []
+                sub = sum(li.get("amount", 0) for li in items)
+                ledger.record("invoice_finalized", invoice_id=result.get("invoice_id"),
+                              property=args.get("property"), unit=args.get("unit"),
+                              work_order=job.get("work_order", ""),
+                              total=round(sub * 1.1055, 2), pdf=result.get("pdf"))
+            elif tool == "send_client_message":
+                ledger.record("message_sent", to=result.get("to"),
+                              subject=result.get("subject"),
+                              property=(convo.active_job or {}).get("property", ""),
+                              delivery=result.get("delivery", "logged"))
+        except Exception:  # noqa: BLE001 - the ledger must never break a reply
+            pass
+
+    def _save_state(self, conv_id: str, convo: Conversation) -> None:
+        """Persist the conversation's working state so a gateway restart never
+        loses the operator's job or draft. Pending approvals are deliberately
+        NOT persisted: an approval must be given to a live process."""
+        try:
+            import json
+
+            path = os.path.join("logs", f"state_{conv_id}.json")
+            os.makedirs("logs", exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
+                json.dump({"active_job": convo.active_job,
+                           "last_invoice": convo.last_invoice,
+                           "last_draft": convo.last_draft}, fh, default=str)
+        except Exception:  # noqa: BLE001 - persistence is best-effort
+            pass
+
+    def _load_state(self, conv_id: str, convo: Conversation) -> None:
+        try:
+            import json
+
+            path = os.path.join("logs", f"state_{conv_id}.json")
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as fh:
+                    data = json.load(fh)
+                convo.active_job = data.get("active_job")
+                convo.last_invoice = data.get("last_invoice")
+                convo.last_draft = data.get("last_draft")
+        except Exception:  # noqa: BLE001
+            pass
 
     @staticmethod
     def _show_document(result) -> None:
@@ -281,7 +412,10 @@ class Agent:
                     f"{' — WO ' + result['work_order'] if result.get('work_order') else ''}.\n"
                     f"{result['task_count']} tasks found, {result['priced_count']} priced: {priced}.\n"
                     f"Assignee: {c.get('name') or 'unknown'} {c.get('email','')} {c.get('phone','')}\n"
-                    "This job now drives estimates, invoices, and drafts. Say "
+                    + ("NOTE: this work order format is new to me, so I kept only "
+                       "the clearest task lines - please review them.\n"
+                       if result.get("format_unrecognized") else "")
+                    + "This job now drives estimates, invoices, and drafts. Say "
                     "'make the estimate' or 'make the invoice'."
                     + (f"\n(from email: {result.get('email_from')} - "
                        f"{result.get('email_subject')})" if result.get("email_from") else ""))
@@ -304,13 +438,30 @@ class Agent:
         if tool == "draft_client_message":
             return f"Draft to {result['to']}:\n{result['body']}\n(Not sent. Approve to send.)"
         if tool == "send_client_message":
+            extra = ""
+            if result.get("attachment"):
+                extra = f" with {result['attachment'].rsplit('/',1)[-1]} attached"
             return (f"Done - message to {result.get('to','?')} "
-                    f"('{result.get('subject','')}') recorded as sent.")
+                    f"('{result.get('subject','')}'){extra} sent "
+                    f"({result.get('delivery','logged')}).")
         if tool == "finalize_invoice":
             reply = f"Done - invoice {result.get('invoice_id','?')} finalized"
             if result.get("pdf"):
                 reply += f".\nPDF: {result['pdf']} (opening it now)"
             return reply + ("" if result.get("pdf") else ".")
         if tool == "query_jobs":
-            return f"Jobs for {result['property']}: {result['jobs']}"
+            jobs = result.get("jobs", [])
+            if not jobs:
+                return (f"Jobs for {result.get('property','all')}: none recorded yet. "
+                        "Finalized invoices and loaded work orders will appear here.")
+            lines = [f"Jobs for {result.get('property','all')}"
+                     + (f" (last {result['days']} days)" if result.get("days") else "") + ":"]
+            for j in jobs:
+                what = j["kind"].replace("_", " ")
+                total = f" ${j['total']:,.2f}" if j.get("total") else ""
+                lines.append(f"  {j['when']}  {what}: {j.get('property','')} "
+                             f"#{j.get('unit','')}{total}")
+            lines.append(f"Invoices finalized: {result.get('invoices_finalized',0)} | "
+                         f"Total billed: ${result.get('billed_total',0):,.2f}")
+            return "\n".join(lines)
         return str(result)

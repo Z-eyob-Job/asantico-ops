@@ -133,3 +133,37 @@ class TelegramChannel(Channel):
             self._call("sendMessage", {"chat_id": conv_id, "text": text}, timeout=15)
         except urllib.error.URLError as exc:
             logger.warning("sendMessage to chat %s failed (%s).", conv_id, exc)
+        # Phone parity with the desktop's auto-open: when the reply references
+        # a generated document, deliver the actual PDF to the chat.
+        import re as _re
+        from pathlib import Path as _Path
+
+        for match in _re.findall(r"(?:estimates|invoices)/[\w.-]+\.pdf", text):
+            path = _Path(match)
+            if path.exists():
+                self._send_document(conv_id, path)
+
+    def _send_document(self, conv_id: str, path) -> None:
+        """Upload a PDF with multipart/form-data using only the stdlib."""
+        import uuid
+
+        boundary = uuid.uuid4().hex
+        data = path.read_bytes()
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="chat_id"\r\n\r\n{conv_id}\r\n'
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="document"; filename="{path.name}"\r\n'
+            "Content-Type: application/pdf\r\n\r\n"
+        ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(
+            _API.format(token=self.token, method="sendDocument"),
+            data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=60):
+                pass
+            logger.info("Sent document %s to chat %s", path.name, conv_id)
+        except urllib.error.URLError as exc:
+            logger.warning("sendDocument to chat %s failed (%s).", conv_id, exc)

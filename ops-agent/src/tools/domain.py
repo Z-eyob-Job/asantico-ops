@@ -318,13 +318,48 @@ def draft_client_message(manager: str, subject: str, context: str = "") -> dict:
     return {"to": manager, "subject": subject, "body": body, "status": "draft"}
 
 
-def send_client_message(to: str, subject: str, body: str) -> dict:
-    """GATED: actually sends to a real client. Needs approval."""
-    return {"to": to, "subject": subject, "status": "sent"}
+def send_client_message(to: str, subject: str, body: str,
+                        to_email: str = "", attachment: str = "") -> dict:
+    """GATED: send to a real client. Needs approval.
+
+    Delivery ladder: with SEND_REAL_EMAIL=1 and EMAIL_USER/EMAIL_PASS set (the
+    same app password used for reading), the message is actually emailed over
+    SMTP SSL - with the document PDF attached when one is provided. Otherwise
+    delivery is recorded locally (the offline demo mode). Either way the action
+    only runs after the approval gate."""
+    delivery = "logged"
+    if (os.getenv("SEND_REAL_EMAIL", "0") == "1" and to_email
+            and os.getenv("EMAIL_USER") and os.getenv("EMAIL_PASS")):
+        try:
+            import smtplib
+            from email.message import EmailMessage
+            from pathlib import Path
+
+            msg = EmailMessage()
+            msg["From"] = os.environ["EMAIL_USER"]
+            msg["To"] = to_email
+            msg["Subject"] = subject
+            msg.set_content(body)
+            if attachment and Path(attachment).exists():
+                data = Path(attachment).read_bytes()
+                msg.add_attachment(data, maintype="application",
+                                   subtype="pdf",
+                                   filename=Path(attachment).name)
+            host = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
+            with smtplib.SMTP_SSL(host, 465, timeout=30) as smtp:
+                smtp.login(os.environ["EMAIL_USER"], os.environ["EMAIL_PASS"])
+                smtp.send_message(msg)
+            delivery = f"emailed to {to_email}"
+        except Exception as exc:  # noqa: BLE001 - fall back to logged delivery
+            logger.warning("Real email send failed (%s); recorded locally.", exc)
+            delivery = f"logged (email failed: {exc})"
+    return {"to": to, "subject": subject, "status": "sent",
+            "delivery": delivery, "attachment": attachment or None}
 
 
-def query_jobs(property: str | None = None) -> dict:
-    """READ: look up job records. Stub returns a sample for the demo."""
-    return {"property": property or "all",
-            "jobs": [{"id": "WO-208", "property": "VEER LOFTS", "unit": "208",
-                      "status": "completed", "trade": "plumbing"}]}
+def query_jobs(property: str | None = None, days: int | None = None) -> dict:
+    """READ: real job history and billing totals from the append-only ledger
+    (logs/jobs.jsonl). Answers "what jobs for X" and "how much did I bill"."""
+    from src import ledger
+
+    return ledger.query(property=property, days=days)
