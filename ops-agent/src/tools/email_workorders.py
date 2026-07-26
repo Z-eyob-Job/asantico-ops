@@ -138,6 +138,14 @@ def fetch_email_work_order(query: str = "") -> dict:
                                     subject, re.I)
                 if subj_wo and not job.get("work_order"):
                     job["work_order"] = subj_wo.group(1)
+                # Sidecar: remember the email-derived facts next to the file so
+                # a later local re-load of the same PDF keeps them.
+                import json as _json
+                meta = {"property": job.get("property"), "unit": job.get("unit"),
+                        "work_order": job.get("work_order"), "email_from": sender,
+                        "email_subject": subject}
+                (saved.parent / (saved.name + ".meta.json")).write_text(
+                    _json.dumps(meta))
                 job["email_from"] = sender
                 job["email_subject"] = subject
                 job["email_date"] = _decode(msg.get("Date"))

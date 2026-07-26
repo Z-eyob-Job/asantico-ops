@@ -8,6 +8,7 @@ import inspect
 import logging
 
 from src.tools import domain
+from src.tools import chat as chat_tool
 from src.tools import email_workorders, workorder
 from src.tools.knowledge_base import knowledge_base
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 REGISTRY = {
     "knowledge_base": knowledge_base,
+    "chat": chat_tool.chat,
     "load_work_order": workorder.load_work_order,
     "fetch_email_work_order": email_workorders.fetch_email_work_order,
     "query_jobs": domain.query_jobs,

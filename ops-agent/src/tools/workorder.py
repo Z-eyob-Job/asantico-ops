@@ -198,6 +198,19 @@ def load_work_order(path: str = "", query: str = "") -> dict:
     except Exception as exc:  # noqa: BLE001 - degrade with a message, never crash
         return {"ok": False, "error": f"Could not read {p.name}: {exc}"}
     job = parse_work_order(text, source_name=p.name)
+    meta_path = p.parent / (p.name + ".meta.json")
+    if meta_path.exists():
+        try:
+            import json as _json
+
+            meta = _json.loads(meta_path.read_text())
+            for key in ("property", "unit", "work_order"):
+                if meta.get(key):
+                    job[key] = meta[key]
+            if meta.get("email_from"):
+                job["email_from"] = meta["email_from"]
+        except Exception:  # noqa: BLE001 - sidecar is a convenience only
+            pass
     logger.info("Parsed work order %s: %s #%s, %d tasks (%d priced)",
                 p.name, job["property"], job["unit"], job["task_count"],
                 job["priced_count"])

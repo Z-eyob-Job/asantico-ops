@@ -149,7 +149,12 @@ class Agent:
                         for li in removed))
             if edit.get("add"):
                 added = edit["add"]
-                items.extend(added if isinstance(added, list) else [added])
+                added = added if isinstance(added, list) else [added]
+                if any(li.get("assumed") for li in items):
+                    items = [li for li in items if not li.get("assumed")]
+                    call.notes.append("replaced the assumed service-call line "
+                                      "with your priced lines.")
+                items.extend(added)
             if edit.get("target_subtotal") is not None:
                 current = sum(li.get("amount", 0) for li in items)
                 diff = round(edit["target_subtotal"] - current, 2)
@@ -196,6 +201,11 @@ class Agent:
             call.args["job_site"] = site
             log_event("document_uses_work_order", conv_id, trace_id,
                       tool=call.tool, work_order=job.get("work_order", ""))
+        if call.tool == "chat" and convo.active_job:
+            job = convo.active_job
+            call.args["context"] = (f"active job: {job.get('property','')} "
+                                    f"#{job.get('unit','')}, "
+                                    f"{job.get('task_count',0)} tasks")
         if call.tool == "draft_client_message" and convo.active_job:
             job = convo.active_job
             call.args["subject"] = (f"{job.get('property','')} #{job.get('unit','')} "
@@ -205,6 +215,20 @@ class Agent:
             tasks = [t["description"] for t in job.get("tasks", [])][:8]
             call.args["context"] = (f"{job.get('property','')} unit {job.get('unit','')}; "
                                     f"completed tasks: {', '.join(tasks)}")
+
+        # Never render a $0 document: if there are no priced lines, ask for
+        # prices instead of producing a meaningless PDF.
+        if call.tool in ("generate_estimate", "generate_invoice") \
+                and not call.args.get("line_items"):
+            job = convo.active_job or {}
+            hint = ""
+            if job.get("tasks"):
+                names = ", ".join(t["description"] for t in job["tasks"][:4])
+                hint = f" The work order lists tasks ({names}, ...) but no prices."
+            log_event("document_needs_prices", conv_id, trace_id, tool=call.tool)
+            return ("I need prices before I draft this document." + hint +
+                    " Tell me the lines, for example: 'materials 200 and labor "
+                    "150', or 'add drywall repair for $280'.")
 
         try:
             result = registry.call(call.tool, **call.args)
@@ -244,6 +268,8 @@ class Agent:
 
     @staticmethod
     def _format(tool: str, result: dict, approved: bool) -> str:
+        if tool == "chat":
+            return result.get("reply", "")
         if tool in ("load_work_order", "fetch_email_work_order"):
             if not result.get("ok"):
                 return result.get("error", "Could not read that work order.")

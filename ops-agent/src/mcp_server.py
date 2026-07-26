@@ -30,6 +30,11 @@ server = Server("asantico-ops")
 
 # JSON Schemas for each tool's arguments (the inputSchema MCP clients receive).
 TOOL_SCHEMAS: dict[str, dict] = {
+    "chat": {
+        "type": "object",
+        "properties": {"message": {"type": "string", "description": "Conversational message for the assistant."}},
+        "required": ["message"],
+    },
     "knowledge_base": {
         "type": "object",
         "properties": {"query": {"type": "string", "description": "Question to answer from the Asantico knowledge base."}},
@@ -98,6 +103,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
 }
 
 TOOL_TITLES = {
+    "chat": "Chat with the assistant",
     "knowledge_base": "Knowledge base",
     "load_work_order": "Load work order (parse a checklist export)",
     "fetch_email_work_order": "Fetch work order from email (IMAP)",

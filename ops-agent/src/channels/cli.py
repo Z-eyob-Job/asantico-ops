@@ -17,7 +17,13 @@ from src.channels.base import Channel, Inbound
 
 
 class CLIChannel(Channel):
+    """Terminal channel. With SPEAK=1 on macOS, replies are also spoken aloud
+    using the built-in offline `say` engine (pick a voice with SAY_VOICE, e.g.
+    SAY_VOICE=Samantha). Tables and paths are skipped; only the conversational
+    part is voiced, so review cards stay a visual read."""
+
     name = "cli"
+    _speaker = None  # last `say` process, so replies do not talk over each other
 
     def listen(self) -> Iterator[Inbound]:
         print("Asantico Operations Agent (CLI). Type a message, 'voice <audio "
@@ -59,3 +65,30 @@ class CLIChannel(Channel):
 
     def send(self, conv_id: str, text: str) -> None:
         print(f"\nagent> {text}\n")
+        self._speak(text)
+
+    def _speak(self, text: str) -> None:
+        import os
+        import subprocess
+        import sys as _sys
+
+        if _sys.platform != "darwin" or os.getenv("SPEAK", "0") != "1":
+            return
+        # Voice the conversational lines only: skip table rows (indented),
+        # paths, and JSON-ish content; cap length so it stays snappy.
+        lines = [ln for ln in text.splitlines()
+                 if ln and not ln.startswith(" ") and "/" not in ln
+                 and "{" not in ln]
+        speech = " ".join(lines)[:280]
+        if not speech:
+            return
+        try:
+            if self._speaker and self._speaker.poll() is None:
+                self._speaker.terminate()
+            cmd = ["say"]
+            voice = os.getenv("SAY_VOICE")
+            if voice:
+                cmd += ["-v", voice]
+            self._speaker = subprocess.Popen(cmd + [speech])
+        except OSError:
+            pass  # voice is a convenience, never an error

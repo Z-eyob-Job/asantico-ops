@@ -12,7 +12,8 @@ def test_mcp_lists_all_registered_tools():
     assert "send_client_message" in names
     assert "load_work_order" in names
     assert "fetch_email_work_order" in names
-    assert len(names) == 11
+    assert "chat" in names
+    assert len(names) == 12
 
 
 def test_mcp_gated_tool_blocked_without_approval():

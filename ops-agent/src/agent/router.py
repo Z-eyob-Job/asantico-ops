@@ -73,7 +73,8 @@ approval. Prefer the tool that advances this flow. Reply with ONLY a JSON \
 object: {"tool": <name>, "args": {...}, "rationale": <short string>}.
 
 Tools and their args:
-- knowledge_base {"query": str}: questions about policy, tax, procedures.
+- chat {"message": str}: greetings, small talk, "what can you do", anything conversational.\
+- knowledge_base {"query": str}: questions about company policy, tax rules, procedures.
 - load_work_order {"path": str, "query": str}: load/find a work-order file. \
 Empty path means search Downloads for the newest one; query filters by name.
 - fetch_email_work_order {"query": str}: pull the newest work-order attachment \
@@ -135,21 +136,33 @@ def extract_edit(m: str) -> dict:
     m = m.lower()
     edit: dict = {}
     adds = []
+
+    def _canon(desc: str) -> str:
+        """One name per concept, typos included, so the same line can never be
+        added twice under two spellings (a money-math invariant)."""
+        d = desc.strip().lower()
+        d = re.sub(r"^(price on the |price for the |price on |price for |the )", "", d)
+        d = re.sub(r"\s*(cost|costs|costed|charge|charges|fee)s?\s*$", "", d).strip()
+        if d.startswith("mat"):
+            return "Materials"
+        if d.startswith(("lab", "labour")):
+            return "Labor"
+        if d.startswith("sup"):
+            return "Supplies"
+        if d in ("another", "more", "extra", "one more", "additional"):
+            return "Additional charge"
+        return (d or "additional charge").title()
+
+    def _add(desc: str, amt: float) -> None:
+        if not any(a["description"] == desc and abs(a["amount"] - amt) < 0.005
+                   for a in adds):
+            adds.append({"description": desc, "amount": amt})
+
     for am in re.finditer(r"\badd (?:a |an |some |another )?([a-z][a-z /-]{1,40}?)(?:\s*,?\s*which is|\s+for|\s+at|\s+of|:)?\s*\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?\b", m):
-        desc = am.group(1).strip()
-        desc = re.sub(r"^(price on the |price for the |price on |price for |the )", "", desc).strip()
-        adds.append({"description": (desc or "Additional charge").title(),
-                     "amount": float(am.group(2))})
+        _add(_canon(am.group(1)), float(am.group(2)))
     # "<thing> (is )costed/costs/cost (me) 200", "<thing>: 200", "labor 150"
     for cm in re.finditer(r"\b(mat[a-z]{3,9}|labou?r|parts|sup?pl[a-z]{2,4}|misc\w*|trip charge|service call)\b[a-z ]{0,20}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\b", m):
-        raw = cm.group(1).strip().lower()
-        desc = ("Materials" if raw.startswith("mat")
-                else "Labor" if raw.startswith("lab")
-                else "Supplies" if raw.startswith("sup")
-                else raw.title())
-        amt = float(cm.group(2))
-        if not any(a["description"].lower() == desc.lower() for a in adds):
-            adds.append({"description": desc, "amount": amt})
+        _add(_canon(cm.group(1)), float(cm.group(2)))
     for am in re.finditer(r"\badd\s+\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?(?=\s|,|$|\band\b)", m):
         amt = float(am.group(1))
         if not any(a["amount"] == amt for a in adds):
@@ -167,6 +180,11 @@ def extract_edit(m: str) -> dict:
 
 def keyword_route(message: str) -> ToolCall:
     m = message.lower().strip()
+
+    # Small talk goes to the conversational tool, not the knowledge base.
+    if re.match(r"^(hi|hello|hey|yo|sup|good (morning|afternoon|evening)|thanks?|thank you|how are you|what can you do|who are you|help)\b[!,. ]*$", m) \
+            or m in ("?",):
+        return ToolCall("chat", {"message": message}, "Conversational message.")
 
     # Work-order ingestion comes first: "workorder <file>" (also "load work
     # order <file>"). The path keeps the original casing from the raw message.
@@ -289,7 +307,8 @@ def _line_items_with_notes(m: str):
     if amt is None:
         note = ("no price was found in the message, so a 150.00 service-call "
                 "amount was assumed; confirm before finalizing.")
-        return [{"description": "Service call", "amount": 150.0}], [note]
+        return [{"description": "Service call", "amount": 150.0,
+                 "assumed": True}], [note]
     return [{"description": "Service call", "amount": amt}], []
 
 
