@@ -4,9 +4,14 @@ one place."""
 
 from __future__ import annotations
 
+import inspect
+import logging
+
 from src.tools import domain
 from src.tools import email_workorders, workorder
 from src.tools.knowledge_base import knowledge_base
+
+logger = logging.getLogger(__name__)
 
 REGISTRY = {
     "knowledge_base": knowledge_base,
@@ -24,6 +29,21 @@ REGISTRY = {
 
 
 def call(tool_name: str, **kwargs):
+    """Call a registered tool, dropping arguments its signature does not accept.
+
+    LLM routers (cloud or local) sometimes attach extra keys ("rationale",
+    "confidence", ...) inside the args object. A tool must never crash on that:
+    unknown keys are logged and dropped, so every router backend can drive the
+    same registry safely. The filter is signature-based, so adding a parameter
+    to a tool automatically starts accepting it.
+    """
     if tool_name not in REGISTRY:
         raise KeyError(f"Unknown tool: {tool_name}")
-    return REGISTRY[tool_name](**kwargs)
+    fn = REGISTRY[tool_name]
+    params = inspect.signature(fn).parameters
+    if not any(p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        dropped = sorted(k for k in kwargs if k not in params)
+        if dropped:
+            logger.warning("Dropping unexpected args for %s: %s", tool_name, dropped)
+            kwargs = {k: v for k, v in kwargs.items() if k in params}
+    return fn(**kwargs)
