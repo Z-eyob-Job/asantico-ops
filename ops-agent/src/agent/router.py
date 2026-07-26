@@ -81,8 +81,10 @@ from email.
 - triage_work_order {"description": str}: classify a new problem report.
 - compute_tax {"subtotal": number}
 - generate_estimate {"property": str, "unit": str, "line_items": [{"description": str, "amount": number}]}: \
-new estimate. To EDIT the current draft use {"edit": {"add": {"description": str, "amount": number}}} \
-and/or {"edit": {"target_subtotal": number}} instead.
+new estimate. To EDIT the current draft use {"edit": {"add": {"description": str, "amount": number}}}, \
+{"edit": {"remove": "words from the line to remove"}}, and/or \
+{"edit": {"target_subtotal": number}} instead. NEVER rebuild the line list \
+yourself to remove an item - always use the remove edit.
 - generate_invoice: same args as generate_estimate.
 - draft_client_message {"manager": str, "subject": str}
 - send_client_message {"to": str, "subject": str, "body": str}: GATED.
@@ -185,6 +187,9 @@ def keyword_route(message: str) -> ToolCall:
     tot_m = re.search(r"\b(?:make|set|change)\b.{0,30}?\b(?:total|price|subtotal)\b.{0,15}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)", m)
     if tot_m:
         edit["target_subtotal"] = float(tot_m.group(1))
+    rm_m = re.search(r"\b(?:remove|delete|take (?:off|out)|drop)\b\s+(?:the\s+)?([a-z][a-z0-9 /-]{2,40}?)(?:\s+(?:part|line|item|charge|cost))?\s*(?:from.*)?$", m)
+    if rm_m:
+        edit["remove"] = rm_m.group(1).strip()
     if edit:
         return ToolCall("generate_estimate", {"edit": edit},
                         "Operator edited the current draft.")

@@ -121,6 +121,22 @@ class Agent:
                 return ("There is no draft to edit yet. Load a work order or ask "
                         "for an estimate first.")
             items = list(base.get("line_items", []))
+            if edit.get("remove"):
+                target = str(edit["remove"]).lower()
+                words = {w for w in target.split() if len(w) > 2}
+                def _matches(li):
+                    desc = li.get("description", "").lower()
+                    return target in desc or any(w in desc for w in words)
+                removed = [li for li in items if _matches(li)]
+                if not removed:
+                    kept_names = "; ".join(li.get("description", "?") for li in items)
+                    return (f"I could not find a line matching '{edit['remove']}'. "
+                            f"Current lines: {kept_names}. Nothing was changed.")
+                items = [li for li in items if not _matches(li)]
+                call.notes.append(
+                    "removed: " + ", ".join(
+                        f"{li.get('description','?')} (${li.get('amount',0):.2f})"
+                        for li in removed))
             if edit.get("add"):
                 added = edit["add"]
                 items.extend(added if isinstance(added, list) else [added])
