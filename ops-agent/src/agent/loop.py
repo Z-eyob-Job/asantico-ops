@@ -67,9 +67,17 @@ class Agent:
                 convo.pending = None
                 log_event("approval_denied", conv_id, trace_id, tool=tool)
                 return "Cancelled. Nothing was sent or finalized."
-            # Anything else: re-prompt.
-            log_event("approval_pending_reprompt", conv_id, trace_id)
-            return "There is an action waiting. Reply 'approve' or 'cancel'."
+            # An edit supersedes the pending action: the operator is revising
+            # the draft, not approving it. Fall through to normal routing.
+            from src.agent.router import extract_edit
+
+            if extract_edit(text):
+                convo.pending = None
+                log_event("approval_superseded_by_edit", conv_id, trace_id)
+            else:
+                log_event("approval_pending_reprompt", conv_id, trace_id)
+                return ("There is an action waiting. Reply 'approve' or 'cancel', "
+                        "or tell me what to change.")
 
         # A bare control word with nothing pending controls nothing. Never route
         # it to a tool. This is enforced before routing, so it holds identically
@@ -116,10 +124,12 @@ class Agent:
         # line - and that interpretation is surfaced as a note, never silent.
         if call.tool in ("generate_estimate", "generate_invoice") and "edit" in call.args:
             edit = call.args.pop("edit")
-            base = convo.last_invoice
-            if base is None:
-                return ("There is no draft to edit yet. Load a work order or ask "
-                        "for an estimate first.")
+            base = convo.last_invoice or {}
+            if not base and not edit.get("add"):
+                # Removing/adjusting needs an existing draft; but named lines
+                # with prices ("materials 200 and labor 150") ARE a new document.
+                return ("There is no draft to edit yet. Load a work order or "
+                        "ask for an estimate first.")
             items = list(base.get("line_items", []))
             if edit.get("remove"):
                 target = str(edit["remove"]).lower()
@@ -150,8 +160,9 @@ class Agent:
                         f"interpreted {edit['target_subtotal']:.2f} as the pre-tax "
                         f"subtotal and added a {label} line of {diff:.2f} to reach it; "
                         "tax is computed on top.")
-            call.tool = ("generate_invoice" if base.get("document") == "invoice"
-                         else "generate_estimate")
+            if base:  # editing an existing draft keeps its document type
+                call.tool = ("generate_invoice" if base.get("document") == "invoice"
+                             else "generate_estimate")
             call.args["property"] = base.get("property", "Unknown Property")
             call.args["unit"] = base.get("unit", "NA")
             call.args["line_items"] = items
@@ -266,9 +277,14 @@ class Agent:
                     f"(10.55%), total ${result['total']}.")
         if tool == "draft_client_message":
             return f"Draft to {result['to']}:\n{result['body']}\n(Not sent. Approve to send.)"
-        if tool in ("send_client_message", "finalize_invoice"):
-            verb = "sent" if tool == "send_client_message" else "finalized"
-            return f"Done. Action {verb}: {result}"
+        if tool == "send_client_message":
+            return (f"Done - message to {result.get('to','?')} "
+                    f"('{result.get('subject','')}') recorded as sent.")
+        if tool == "finalize_invoice":
+            reply = f"Done - invoice {result.get('invoice_id','?')} finalized"
+            if result.get("pdf"):
+                reply += f".\nPDF: {result['pdf']} (opening it now)"
+            return reply + ("" if result.get("pdf") else ".")
         if tool == "query_jobs":
             return f"Jobs for {result['property']}: {result['jobs']}"
         return str(result)

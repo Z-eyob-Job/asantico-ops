@@ -46,9 +46,30 @@ def needs_approval(tool_name: str) -> bool:
 
 
 def approval_prompt(tool_name: str, args: dict) -> str:
-    """Human-readable confirmation message shown in the channel before acting."""
-    return (
-        f"Approval needed before I run '{tool_name}'.\n"
-        f"Details: {args}\n"
-        f"Reply 'approve' to proceed or 'cancel' to stop."
-    )
+    """Human-readable review card shown in the channel before acting.
+
+    No raw dicts: the operator reviews the document the way a person reads it -
+    lines, money, recipient - then approves, cancels, or just says what to
+    change (an edit supersedes the pending action)."""
+    if tool_name == "finalize_invoice":
+        items = args.get("line_items", []) or []
+        sub = sum(li.get("amount", 0) for li in items)
+        tax = round(sub * 0.1055, 2)
+        lines = "\n".join(f"  {li.get('description','?'):<52} ${li.get('amount',0):>9,.2f}"
+                          for li in items)
+        head = f"{args.get('property','')} #{args.get('unit','')}".strip(" #")
+        return ("Approval needed: FINALIZE INVOICE" + (f" for {head}" if head else "") + "\n"
+                + (lines + "\n" if lines else "")
+                + f"  {'Subtotal':<52} ${sub:>9,.2f}\n"
+                + f"  {'Sales tax (10.55%)':<52} ${tax:>9,.2f}\n"
+                + f"  {'TOTAL':<52} ${sub + tax:>9,.2f}\n"
+                + "Reply 'approve' to finalize, 'cancel' to stop, or tell me what to change.")
+    if tool_name == "send_client_message":
+        return ("Approval needed: SEND CLIENT MESSAGE\n"
+                f"  To: {args.get('to','?')}\n"
+                f"  Subject: {args.get('subject','')}\n"
+                f"  ---\n  {args.get('body','')}\n  ---\n"
+                "Reply 'approve' to send, 'cancel' to stop, or tell me what to change.")
+    pretty = ", ".join(f"{k}={v}" for k, v in args.items())
+    return (f"Approval needed before I run '{tool_name}'. {pretty}\n"
+            "Reply 'approve' to proceed or 'cancel' to stop.")

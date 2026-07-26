@@ -128,6 +128,43 @@ def local_route(message: str) -> ToolCall:
                     ["routed by local model (" + os.getenv("LOCAL_MODEL", "qwen2.5:3b") + ")"])
 
 
+def extract_edit(m: str) -> dict:
+    """Pull add/remove/target-subtotal intents out of a message. Understands
+    loose phrasings: "add X for 30", "X costed me 200", "labor 150",
+    "remove the Y", "make the total 300". Returns {} when none found."""
+    m = m.lower()
+    edit: dict = {}
+    adds = []
+    for am in re.finditer(r"\badd (?:a |an |some |another )?([a-z][a-z /-]{1,40}?)(?:\s*,?\s*which is|\s+for|\s+at|\s+of|:)?\s*\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?\b", m):
+        desc = am.group(1).strip()
+        desc = re.sub(r"^(price on the |price for the |price on |price for |the )", "", desc).strip()
+        adds.append({"description": (desc or "Additional charge").title(),
+                     "amount": float(am.group(2))})
+    # "<thing> (is )costed/costs/cost (me) 200", "<thing>: 200", "labor 150"
+    for cm in re.finditer(r"\b(mat[a-z]{3,9}|labou?r|parts|sup?pl[a-z]{2,4}|misc\w*|trip charge|service call)\b[a-z ]{0,20}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\b", m):
+        raw = cm.group(1).strip().lower()
+        desc = ("Materials" if raw.startswith("mat")
+                else "Labor" if raw.startswith("lab")
+                else "Supplies" if raw.startswith("sup")
+                else raw.title())
+        amt = float(cm.group(2))
+        if not any(a["description"].lower() == desc.lower() for a in adds):
+            adds.append({"description": desc, "amount": amt})
+    for am in re.finditer(r"\badd\s+\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?(?=\s|,|$|\band\b)", m):
+        amt = float(am.group(1))
+        if not any(a["amount"] == amt for a in adds):
+            adds.append({"description": "Additional charge", "amount": amt})
+    if adds:
+        edit["add"] = adds
+    tot_m = re.search(r"\b(?:make|set|change)\b.{0,30}?\b(?:total|price|subtotal)\b.{0,15}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)", m)
+    if tot_m:
+        edit["target_subtotal"] = float(tot_m.group(1))
+    rm_m = re.search(r"\b(?:remove|delete|take (?:off|out)|drop)\b\s+(?:the\s+)?([a-z][a-z0-9 /-]{2,40}?)(?:\s+(?:part|line|item|charge|cost))?\s*(?:from.*)?$", m)
+    if rm_m:
+        edit["remove"] = rm_m.group(1).strip()
+    return edit
+
+
 def keyword_route(message: str) -> ToolCall:
     m = message.lower().strip()
 
@@ -155,7 +192,7 @@ def keyword_route(message: str) -> ToolCall:
     # so the word "email" here never routes to a gated send.
     if "email" in m and any(w in m for w in ("check", "fetch", "get", "look", "read", "scan", "find")):
         needle = ""
-        nm = re.search(r"(?:for|about)\s+([a-z0-9 ]{3,30})$", m)
+        nm = re.search(r"(?:from|for|about)\s+([a-z0-9@. ]{3,40})$", m)
         if nm and "work order" not in nm.group(1):
             needle = nm.group(1).strip()
         return ToolCall("fetch_email_work_order", {"query": needle},
@@ -167,32 +204,14 @@ def keyword_route(message: str) -> ToolCall:
             return ToolCall("knowledge_base", {"query": message},
                             "Question phrasing detected; answering from the knowledge base.")
 
-    # Edits to the current draft: "add materials which is 30", "add labor for
-    # 450", "make the total price 300". Routed as a re-generate with an edit
-    # payload; the loop merges it with the draft the operator is looking at.
-    edit: dict = {}
-    adds = []
-    for am in re.finditer(r"\badd (?:a |an |some |another )?([a-z][a-z /-]{1,40}?)(?:\s*,?\s*which is|\s+for|\s+at|\s+of|:)?\s*\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?\b", m):
-        desc = am.group(1).strip()
-        # strip filler so "another price on the materials" becomes "materials"
-        desc = re.sub(r"^(price on the |price for the |price on |price for |the )", "", desc).strip()
-        adds.append({"description": (desc or "Additional charge").title(),
-                     "amount": float(am.group(2))})
-    for am in re.finditer(r"\badd\s+\$?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:dollars)?(?=\s|,|$|\band\b)", m):
-        amt = float(am.group(1))
-        if not any(a["amount"] == amt for a in adds):
-            adds.append({"description": "Additional charge", "amount": amt})
-    if adds:
-        edit["add"] = adds
-    tot_m = re.search(r"\b(?:make|set|change)\b.{0,30}?\b(?:total|price|subtotal)\b.{0,15}?\$?\s*([0-9]+(?:\.[0-9]{1,2})?)", m)
-    if tot_m:
-        edit["target_subtotal"] = float(tot_m.group(1))
-    rm_m = re.search(r"\b(?:remove|delete|take (?:off|out)|drop)\b\s+(?:the\s+)?([a-z][a-z0-9 /-]{2,40}?)(?:\s+(?:part|line|item|charge|cost))?\s*(?:from.*)?$", m)
-    if rm_m:
-        edit["remove"] = rm_m.group(1).strip()
+    # Edits to the current draft (or line items for a NEW document when no
+    # draft exists yet): "add materials which is 30", "materials cost me 200
+    # and labor 150", "remove the shower head", "make the total 300".
+    edit = extract_edit(m)
     if edit:
-        return ToolCall("generate_estimate", {"edit": edit},
-                        "Operator edited the current draft.")
+        doc_tool = "generate_invoice" if "invoice" in m else "generate_estimate"
+        return ToolCall(doc_tool, {"edit": edit},
+                        "Operator edited or specified document lines.")
 
     # Finalize must be checked before the invoice branch, since "finalize the
     # invoice" also contains the word "invoice". Finalize is gated.

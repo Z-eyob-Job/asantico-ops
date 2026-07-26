@@ -47,11 +47,17 @@ _SEARCH_LIMIT = 25  # newest N messages scanned per check
 def _decode(value: str | None) -> str:
     if not value:
         return ""
-    parts = email.header.decode_header(value)
+    try:
+        parts = email.header.decode_header(value)
+    except Exception:  # noqa: BLE001 - a malformed header is data, not an error
+        return str(value)
     out = []
     for text, charset in parts:
         if isinstance(text, bytes):
-            out.append(text.decode(charset or "utf-8", errors="replace"))
+            try:
+                out.append(text.decode(charset or "utf-8", errors="replace"))
+            except LookupError:  # bogus charset like "unknown-8bit"
+                out.append(text.decode("utf-8", errors="replace"))
         else:
             out.append(text)
     return "".join(out)
@@ -88,15 +94,21 @@ def fetch_email_work_order(query: str = "") -> dict:
 
         needle = query.lower().strip()
         for msg_id in candidates:
-            _status, msg_data = imap.fetch(msg_id, "(RFC822)")
-            msg = email.message_from_bytes(msg_data[0][1])
-            subject = _decode(msg.get("Subject"))
-            sender = _decode(msg.get("From"))
+            try:
+                _status, msg_data = imap.fetch(msg_id, "(RFC822)")
+                msg = email.message_from_bytes(msg_data[0][1])
+                subject = _decode(msg.get("Subject"))
+                sender = _decode(msg.get("From"))
+            except Exception as exc:  # noqa: BLE001 - skip malformed messages
+                logger.warning("Skipping unreadable message %s: %s", msg_id, exc)
+                continue
             for part in msg.walk():
                 filename = _decode(part.get_filename())
                 if not filename or not _looks_like_work_order(filename, subject):
                     continue
-                if needle and needle not in f"{filename} {subject}".lower():
+                # The query matches attachment name, subject, OR sender, so
+                # "from saniya", a property name, or a WO number all work.
+                if needle and needle not in f"{filename} {subject} {sender}".lower():
                     continue
                 payload = part.get_payload(decode=True)
                 if not payload:
@@ -110,6 +122,22 @@ def fetch_email_work_order(query: str = "") -> dict:
                 from src.tools.workorder import load_work_order
 
                 job = load_work_order(str(saved))
+                # Subjects like "Work Order #50000-1 for JACKSON COURT #606"
+                # are often more reliable than a PDF's internal layout. Prefer
+                # them when the parse looks off (address-like property, no
+                # unit, or nothing priced).
+                subj_prop = re.search(
+                    r"for\s+([A-Za-z][A-Za-z' ]+?)\s*#\s*([A-Za-z0-9-]+)", subject)
+                parse_weak = (job.get("unit") in ("NA", "", None)
+                              or any(c.isdigit() for c in job.get("property", "")[:4])
+                              or not job.get("priced_count"))
+                if subj_prop and parse_weak:
+                    job["property"] = subj_prop.group(1).strip().title()
+                    job["unit"] = subj_prop.group(2)
+                subj_wo = re.search(r"work\s*order\s*#?\s*([\d][\d-]*)",
+                                    subject, re.I)
+                if subj_wo and not job.get("work_order"):
+                    job["work_order"] = subj_wo.group(1)
                 job["email_from"] = sender
                 job["email_subject"] = subject
                 job["email_date"] = _decode(msg.get("Date"))
