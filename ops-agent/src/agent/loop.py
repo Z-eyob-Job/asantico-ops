@@ -49,7 +49,12 @@ class Agent:
                 call = convo.pending
                 convo.pending = None
                 log_event("approval_granted", conv_id, trace_id, tool=call.tool, args=call.args)
-                result = registry.call(call.tool, **call.args)
+                try:
+                    result = registry.call(call.tool, **call.args)
+                except Exception as exc:  # noqa: BLE001 - never kill the gateway
+                    log_event("tool_error", conv_id, trace_id, tool=call.tool, error=str(exc))
+                    return (f"I hit a problem running {call.tool}: {exc}. "
+                            "Nothing was sent or finalized.")
                 log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=True)
                 return self._format(call.tool, result, approved=True)
             if text in CANCEL_WORDS:
@@ -139,12 +144,15 @@ class Agent:
         # property, not just the ones the extractor knows.
         if call.tool in ("generate_estimate", "generate_invoice") and convo.active_job:
             job = convo.active_job
-            explicit_price = not any("assumed" in n for n in call.notes)
+            assumed = any("assumed" in n for n in call.notes)
             if call.args.get("property") in ("Unknown Property", "", None):
                 call.args["property"] = job.get("property", "Unknown Property")
             if call.args.get("unit") in ("NA", "", None):
                 call.args["unit"] = job.get("unit", "NA")
-            if job.get("priced_items") and not explicit_price:
+            # Use the work order's priced items whenever the message did not
+            # carry real ones - none at all (LLM/local routers omit unknown
+            # args) or only the keyword router's assumed service-call default.
+            if job.get("priced_items") and (not call.args.get("line_items") or assumed):
                 call.args["line_items"] = job["priced_items"]
                 call.notes = [n for n in call.notes if "assumed" not in n]
             call.args["scope_items"] = [t["description"] for t in job.get("tasks", [])]
@@ -166,7 +174,13 @@ class Agent:
             call.args["context"] = (f"{job.get('property','')} unit {job.get('unit','')}; "
                                     f"completed tasks: {', '.join(tasks)}")
 
-        result = registry.call(call.tool, **call.args)
+        try:
+            result = registry.call(call.tool, **call.args)
+        except Exception as exc:  # noqa: BLE001 - a tool error must never kill the gateway
+            log_event("tool_error", conv_id, trace_id, tool=call.tool, error=str(exc))
+            return (f"I hit a problem running {call.tool}: {exc}. "
+                    "Nothing was sent or finalized. Try rephrasing, or give me "
+                    "more detail.")
         log_event("tool_executed", conv_id, trace_id, tool=call.tool, gated=False)
         if call.tool in ("load_work_order", "fetch_email_work_order") and result.get("ok"):
             convo.active_job = result  # this job now drives documents and drafts

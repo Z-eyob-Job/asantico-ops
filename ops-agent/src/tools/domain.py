@@ -206,10 +206,20 @@ def _render_document(doc_type: str, doc_number: str, property: str, unit: str,
         return None
 
 
-def generate_estimate(property: str, unit: str, line_items: list[dict],
+def _clean_unit(unit: str) -> str:
+    """Normalize a unit string: 'unit 208', '#208', 'apt 208' -> '208'."""
+    import re as _re
+
+    return _re.sub(r"(?i)^\s*(unit|apt|#)\s*", "", str(unit or "NA")).strip() or "NA"
+
+
+def generate_estimate(property: str = "Unknown Property", unit: str = "NA",
+                      line_items: list[dict] | None = None,
                       scope_items: list[str] | None = None,
                       work_order: str | None = None,
                       job_site: list[str] | None = None) -> dict:
+    line_items = line_items or []
+    unit = _clean_unit(unit)
     amounts = [li.get("amount", 0) for li in line_items]
     subtotal, tax, total = _totals(amounts)
     result = {"document": "estimate", "company": COMPANY, "property": property,
@@ -231,10 +241,13 @@ def generate_estimate(property: str, unit: str, line_items: list[dict],
     return result
 
 
-def generate_invoice(property: str, unit: str, line_items: list[dict],
+def generate_invoice(property: str = "Unknown Property", unit: str = "NA",
+                     line_items: list[dict] | None = None,
                      scope_items: list[str] | None = None,
                      work_order: str | None = None,
                      job_site: list[str] | None = None) -> dict:
+    line_items = line_items or []
+    unit = _clean_unit(unit)
     amounts = [li.get("amount", 0) for li in line_items]
     subtotal, tax, total = _totals(amounts)
     return {"document": "invoice", "company": COMPANY, "property": property,
