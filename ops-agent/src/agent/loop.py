@@ -112,12 +112,25 @@ class Agent:
         # local model resolves pronouns ("finalize it") and stays on-workflow.
         call = route(message, context=self._context(convo))
         convo.history.append(message)
+        if call.tool == "plan":
+            return self._run_plan(conv_id, trace_id, convo, call.args.get("steps", []), message)
         log_event("routed", conv_id, trace_id, tool=call.tool,
                   rationale=call.rationale, risk=policy.risk_of(call.tool).value)
         for note in call.notes:
             log_event("assumption", conv_id, trace_id, tool=call.tool, note=note)
 
         if policy.needs_approval(call.tool):
+            self._enrich_gated(call, convo, message, conv_id, trace_id)
+            convo.pending = call
+            log_event("approval_requested", conv_id, trace_id, tool=call.tool, args=call.args)
+            return policy.approval_prompt(call.tool, call.args)
+
+        return self._execute_ungated(call, convo, message, conv_id, trace_id)
+
+    def _enrich_gated(self, call, convo, message, conv_id, trace_id) -> None:
+        """Fill a gated call with the reviewed draft / drafted invoice / real
+        recipient, so what the operator approves is exactly what runs."""
+        if True:
             # Safety: the operator must approve the exact text that will be sent.
             # If a client message was drafted earlier in this conversation, carry
             # that reviewed draft into the gated send instead of a generic body.
@@ -154,18 +167,22 @@ class Agent:
                     if convo.last_invoice.get(key):
                         call.args[key] = convo.last_invoice[key]
                 log_event("finalize_uses_drafted_invoice", conv_id, trace_id, tool=call.tool)
-            convo.pending = call
-            log_event("approval_requested", conv_id, trace_id, tool=call.tool, args=call.args)
-            return policy.approval_prompt(call.tool, call.args)
 
+    def _execute_ungated(self, call, convo, message, conv_id, trace_id) -> str:
+        """Enrich, guard, run, and absorb a non-gated tool call. Shared by the
+        single-step path and each plan step."""
         # Draft edits: merge "add X for $Y" / "make the total $Z" into the
         # document the operator is looking at, then re-render it. A target
         # total is interpreted as the pre-tax subtotal, balanced with a Labor
         # line - and that interpretation is surfaced as a note, never silent.
         if call.tool in ("generate_estimate", "generate_invoice") and "edit" in call.args:
             edit = call.args.pop("edit")
-            base = convo.last_invoice or {}
-            if not base and not edit.get("add"):
+            fresh = bool(call.args.pop("fresh", False))
+            base = {} if fresh else (convo.last_invoice or {})
+            if fresh:
+                log_event("fresh_document_requested", conv_id, trace_id, tool=call.tool)
+            if not base and not edit.get("add") \
+                    and edit.get("target_subtotal") is None:
                 # Removing/adjusting needs an existing draft; but named lines
                 # with prices ("materials 200 and labor 150") ARE a new document.
                 return ("There is no draft to edit yet. Load a work order or "
@@ -318,6 +335,42 @@ class Agent:
         if call.notes:
             reply += "\nNote: " + " ".join(call.notes)
         return reply
+
+    def _run_plan(self, conv_id, trace_id, convo, steps, message) -> str:
+        """Execute a multi-step plan from the local model. Each step goes
+        through the same enrichment, guards, and policy as a typed command.
+        The first gated step pauses the plan at the approval gate and drops
+        the rest - an approval must always be a conscious, single decision."""
+        steps = [s for s in steps if isinstance(s, dict)][:4]
+        log_event("plan_started", conv_id, trace_id,
+                  steps=[s.get("tool") for s in steps])
+        replies = []
+        for i, step in enumerate(steps, 1):
+            tool = step.get("tool")
+            args = step.get("args") or {}
+            if tool not in registry.REGISTRY or not isinstance(args, dict):
+                replies.append(f"Step {i}: I don't know the tool '{tool}', "
+                               "so I stopped the plan there.")
+                break
+            call = ToolCall(tool, dict(args), "plan step",
+                            [f"step {i} of a {len(steps)}-step plan"])
+            if policy.needs_approval(tool):
+                self._enrich_gated(call, convo, message, conv_id, trace_id)
+                convo.pending = call
+                log_event("approval_requested", conv_id, trace_id,
+                          tool=tool, args=call.args)
+                replies.append(policy.approval_prompt(tool, call.args))
+                if i < len(steps):
+                    replies.append("(Plan paused at the approval gate - reply "
+                                   "'approve' or 'cancel', then tell me what's next.)")
+                break
+            replies.append(f"Step {i}: "
+                           + self._execute_ungated(call, convo, message,
+                                                   conv_id, trace_id))
+            if convo.pending is not None:
+                break  # a step raised its own gate; stop here
+        self._save_state(conv_id, convo)
+        return "\n\n".join(replies) if replies else "The plan was empty."
 
     def _status(self, convo: Conversation) -> str:
         parts = []

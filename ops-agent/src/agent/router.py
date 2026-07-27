@@ -103,7 +103,13 @@ use knowledge_base.
 Examples:
 "add 100 and add materials which is $30" -> {"tool": "generate_estimate", \
 "args": {"edit": {"add": [{"description": "Additional charge", "amount": 100}, \
-{"description": "Materials", "amount": 30}]}}, "rationale": "two line items added"}
+{"description": "Materials", "amount": 30}]}}, "rationale": "edit current draft"}
+"create a new invoice, materials 200 and labor 150" -> {"tool": \
+"generate_invoice", "args": {"edit": {"add": [{"description": "Materials", \
+"amount": 200}, {"description": "Labor", "amount": 150}]}, "fresh": true}, \
+"rationale": "NEW document, not an edit"}
+RULE: create/make/new = fresh document (set "fresh": true, never merge the \
+previous draft). add/remove/change = edit the current draft (no "fresh").
 "make the estimate based on the budget in the work order" -> {"tool": \
 "generate_estimate", "args": {"propose": true}, "rationale": "price from budget"}
 "guess the prices for me" -> {"tool": "generate_estimate", "args": \
@@ -242,7 +248,14 @@ def keyword_route(message: str) -> ToolCall:
     edit = extract_edit(m)
     if edit:
         doc_tool = "generate_invoice" if "invoice" in m else "generate_estimate"
-        return ToolCall(doc_tool, {"edit": edit},
+        args: dict = {"edit": edit}
+        # "create/make/new ..." means a FRESH document from these lines only;
+        # "add/remove/change ..." means edit the current draft. No special
+        # instruction needed - the verb decides.
+        if any(w in m for w in ("create", "make me", "make a", "make an",
+                                "generate", "new ", "start a", "prepare", "build")):
+            args["fresh"] = True
+        return ToolCall(doc_tool, args,
                         "Operator edited or specified document lines.")
 
     # "estimate based on the budget", "propose/guess/suggest the prices":
