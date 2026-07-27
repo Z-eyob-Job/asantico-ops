@@ -149,8 +149,29 @@ def parse_work_order(text: str, source_name: str = "") -> dict:
                         if t["description"] == desc and t["price"] is None:
                             t["price"] = float(pm.group(2))
 
+    # Global dedupe (exports repeat lines across pages) and budget/NTE hunt.
+    seen_desc: set = set()
+    deduped = []
+    for t in tasks:
+        key = t["description"].lower()
+        if key in seen_desc:
+            continue
+        seen_desc.add(key)
+        deduped.append(t)
+    tasks = deduped
+
+    budget = None
+    bm = re.search(r"(?:NTE|not.to.exceed|budget|allowance|limit)\s*[:$ ]*"
+                   r"([0-9][0-9,]*(?:\.[0-9]{2})?)", text, re.I)
+    if bm:
+        try:
+            budget = float(bm.group(1).replace(",", ""))
+        except ValueError:
+            budget = None
+
     priced = [t for t in tasks if t["price"] is not None]
     return {
+        "budget": budget,
         "format_unrecognized": fmt_unrecognized,
         "ok": bool(tasks or prop),
         "source": source_name,

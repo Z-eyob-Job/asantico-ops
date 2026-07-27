@@ -104,6 +104,10 @@ Examples:
 "add 100 and add materials which is $30" -> {"tool": "generate_estimate", \
 "args": {"edit": {"add": [{"description": "Additional charge", "amount": 100}, \
 {"description": "Materials", "amount": 30}]}}, "rationale": "two line items added"}
+"make the estimate based on the budget in the work order" -> {"tool": \
+"generate_estimate", "args": {"propose": true}, "rationale": "price from budget"}
+"guess the prices for me" -> {"tool": "generate_estimate", "args": \
+{"propose": true}, "rationale": "proposed pricing"}
 "the tenant says the heater is dead" -> {"tool": "triage_work_order", \
 "args": {"description": "the tenant says the heater is dead"}, "rationale": \
 "new problem report"}"""
@@ -240,6 +244,14 @@ def keyword_route(message: str) -> ToolCall:
         doc_tool = "generate_invoice" if "invoice" in m else "generate_estimate"
         return ToolCall(doc_tool, {"edit": edit},
                         "Operator edited or specified document lines.")
+
+    # "estimate based on the budget", "propose/guess/suggest the prices":
+    # draft with proposed prices for review instead of refusing.
+    if (("budget" in m or "nte" in m) and any(w in m for w in ("estimate", "invoice", "price"))) \
+            or (any(w in m for w in ("propose", "guess", "suggest")) and "price" in m):
+        doc_tool = "generate_invoice" if "invoice" in m else "generate_estimate"
+        return ToolCall(doc_tool, {"propose": True},
+                        "Operator asked for proposed pricing.")
 
     # Finalize must be checked before the invoice branch, since "finalize the
     # invoice" also contains the word "invoice". Finalize is gated.

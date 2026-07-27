@@ -256,6 +256,27 @@ class Agent:
             call.args["context"] = (f"{job.get('property','')} unit {job.get('unit','')}; "
                                     f"completed tasks: {', '.join(tasks)}")
 
+        # Proposed pricing: "based on the budget" / "guess the prices" - the
+        # agent prices the tasks itself (budget allocation > local model >
+        # price book), loudly marked as proposals for the operator to edit.
+        wants_proposal = bool(call.args.pop("propose", False))
+        if call.tool in ("generate_estimate", "generate_invoice") \
+                and wants_proposal and not call.args.get("line_items"):
+            job = convo.active_job or {}
+            task_names = [t["description"] for t in job.get("tasks", [])]
+            if not task_names:
+                return ("I have no work order loaded to price. Load one first "
+                        "('find the latest work order' or 'check email').")
+            from src.tools import pricing
+
+            proposal = pricing.propose_prices(task_names, job.get("budget"))
+            call.args["line_items"] = proposal["line_items"]
+            call.notes.append(
+                f"PROPOSED prices ({proposal['method']}) - review each line and "
+                "edit before finalizing; nothing bills without your approval.")
+            log_event("prices_proposed", conv_id, trace_id,
+                      method=proposal["method"], budget=job.get("budget"))
+
         # Never render a $0 document: if there are no priced lines, ask for
         # prices instead of producing a meaningless PDF.
         if call.tool in ("generate_estimate", "generate_invoice") \
@@ -265,10 +286,12 @@ class Agent:
             if job.get("tasks"):
                 names = ", ".join(t["description"] for t in job["tasks"][:4])
                 hint = f" The work order lists tasks ({names}, ...) but no prices."
+                if job.get("budget"):
+                    hint += f" It DOES carry a budget of ${job['budget']:,.2f}."
             log_event("document_needs_prices", conv_id, trace_id, tool=call.tool)
             return ("I need prices before I draft this document." + hint +
-                    " Tell me the lines, for example: 'materials 200 and labor "
-                    "150', or 'add drywall repair for $280'.")
+                    " Tell me the lines ('materials 200 and labor 150'), or say "
+                    "'propose the prices' and I will suggest them for your review.")
 
         try:
             result = registry.call(call.tool, **call.args)
@@ -407,11 +430,14 @@ class Agent:
             c = result.get("contact", {})
             priced = ", ".join(f"{i['description']} (${i['amount']:.2f})"
                                for i in result.get("priced_items", [])) or "none"
+            budget_line = (f"Budget found: ${result['budget']:,.2f}.\n"
+                           if result.get("budget") else "")
             return (f"Work order loaded: {result['property']} #{result['unit']}"
                     f"{' — ' + result['address'] if result.get('address') else ''}"
                     f"{' — WO ' + result['work_order'] if result.get('work_order') else ''}.\n"
                     f"{result['task_count']} tasks found, {result['priced_count']} priced: {priced}.\n"
                     f"Assignee: {c.get('name') or 'unknown'} {c.get('email','')} {c.get('phone','')}\n"
+                    + budget_line
                     + ("NOTE: this work order format is new to me, so I kept only "
                        "the clearest task lines - please review them.\n"
                        if result.get("format_unrecognized") else "")

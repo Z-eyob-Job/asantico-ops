@@ -1,3 +1,9 @@
 {"ts": "2026-07-26T21:45:18.851515+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
 {"ts": "2026-07-26T21:45:18.903450+00:00", "kind": "invoice_finalized", "invoice_id": "INV-2026-0726-208", "property": "Veer Lofts", "unit": "208", "work_order": "", "total": 464.31, "pdf": "invoices/invoice_veer-lofts_208_INV-2026-0726-208.pdf"}
 {"ts": "2026-07-26T21:45:18.928903+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
+{"ts": "2026-07-26T21:47:36.658925+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 4, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-27T22:49:05.894241+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 4, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-27T22:49:34.682558+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 4, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-27T23:03:02.147769+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
+{"ts": "2026-07-27T23:03:02.201586+00:00", "kind": "invoice_finalized", "invoice_id": "INV-2026-0727-208", "property": "Veer Lofts", "unit": "208", "work_order": "", "total": 464.31, "pdf": "invoices/invoice_veer-lofts_208_INV-2026-0727-208.pdf"}
+{"ts": "2026-07-27T23:03:02.226276+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
