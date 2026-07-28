@@ -224,9 +224,17 @@ def keyword_route(message: str) -> ToolCall:
     # so the word "email" here never routes to a gated send.
     if "email" in m and any(w in m for w in ("check", "fetch", "get", "look", "read", "scan", "find")):
         needle = ""
-        nm = re.search(r"(?:from|for|about)\s+([a-z0-9@. ]{3,40})$", m)
-        if nm and "work order" not in nm.group(1):
-            needle = nm.group(1).strip()
+        # Prefer the LAST from/for/about clause ("check email for work orders
+        # from saniya" -> "saniya"), never the "for work orders" filler.
+        for nm in re.finditer(r"(?:from|for|about)\s+([a-z0-9@. ]{3,40}?)(?=\s+(?:from|for|about)\b|$)", m):
+            cand = nm.group(1).strip()
+            if cand and "work order" not in cand:
+                needle = cand
+        # Filler, not filters: "from my email", "for the inbox", "for today"...
+        if needle in ("my email", "the email", "email", "my inbox", "the inbox",
+                      "inbox", "me", "my mail", "mail", "today", "my gmail",
+                      "gmail", "new work order today", "today s email"):
+            needle = ""
         return ToolCall("fetch_email_work_order", {"query": needle},
                         "Operator asked to pull a work order from email.")
 

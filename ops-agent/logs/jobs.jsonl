@@ -13,3 +13,9 @@
 {"ts": "2026-07-27T23:17:40.735258+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
 {"ts": "2026-07-27T23:17:40.790641+00:00", "kind": "invoice_finalized", "invoice_id": "INV-2026-0727-208", "property": "Veer Lofts", "unit": "208", "work_order": "", "total": 464.31, "pdf": "invoices/invoice_veer-lofts_208_INV-2026-0727-208.pdf"}
 {"ts": "2026-07-27T23:17:40.815723+00:00", "kind": "message_sent", "to": "Saniya", "subject": "Job update", "property": "", "delivery": "logged"}
+{"ts": "2026-07-27T23:21:16.131532+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 2, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-27T23:22:45.050982+00:00", "kind": "invoice_finalized", "invoice_id": "INV-2026-0727-606", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "total": 144.82, "pdf": "invoices/invoice_jackson-court_606_INV-2026-0727-606.pdf"}
+{"ts": "2026-07-28T00:06:20.378841+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 2, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-28T00:07:07.406191+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 2, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-28T00:10:09.636135+00:00", "kind": "work_order_loaded", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "tasks": 2, "source": "work_order_50000_1.pdf"}
+{"ts": "2026-07-28T00:10:50.581504+00:00", "kind": "invoice_finalized", "invoice_id": "INV-2026-0727-606", "property": "Jackson Court", "unit": "606", "work_order": "50000-1", "total": 379.19, "pdf": "invoices/invoice_jackson-court_606_INV-2026-0727-606.pdf"}
